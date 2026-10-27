@@ -1,0 +1,80 @@
+# =====================================================================
+# CI - runs on every push and every pull request (Deliverable 2b)
+#
+#   lint   : flake8 (style + obvious bugs such as unused imports / undefined names)
+#   test   : the full pytest suite on three Python versions, with coverage
+#            and a JUnit report (= test execution log for the STP)
+#
+# Make this a REQUIRED status check on `main` (Settings > Branches > Branch
+# protection rule) so a PR cannot be merged while CI is red.
+# =====================================================================
+name: CI
+
+on:
+  push:
+    branches: ["**"]          # every branch, so feature branches get feedback early
+  pull_request:
+    branches: [main]
+  workflow_dispatch:          # "Run workflow" button in the Actions tab
+
+permissions:
+  contents: read              # least privilege: CI only needs to read the code
+
+concurrency:                  # a newer push cancels the still-running older run
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (flake8)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: flake8 .
+
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Run test suite
+        run: |
+          mkdir -p reports
+          pytest -v \
+            --cov=app --cov-report=term-missing --cov-report=xml:reports/coverage.xml \
+            --junitxml=reports/junit.xml
+      - name: Write summary
+        if: always()
+        run: |
+          python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import xml.etree.ElementTree as ET
+          root = ET.parse("reports/junit.xml").getroot()
+          suite = root if root.tag == "testsuite" else root.find("testsuite")
+          total, fail = int(suite.get("tests")), int(suite.get("failures")) + int(suite.get("errors"))
+          print(f"### Python ${{ matrix.python-version }}: {total - fail}/{total} tests passed")
+          cov = ET.parse("reports/coverage.xml").getroot()
+          print(f"Line coverage: {float(cov.get('line-rate')) * 100:.1f}%")
+          EOF
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-py${{ matrix.python-version }}
+          path: reports/
+          retention-days: 30
