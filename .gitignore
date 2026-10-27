@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv
+venv
+instance/
+reports/
+.coverage
+coverage.xml
+*.sqlite3
+.env
+.pytest_cache/
