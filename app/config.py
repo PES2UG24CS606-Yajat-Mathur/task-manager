@@ -22,6 +22,10 @@ class Config:
     DATABASE = os.environ.get("DATABASE", str(BASE_DIR / "instance" / "taskmanager.sqlite3"))
     MAX_CONTENT_LENGTH = 64 * 1024   # reject request bodies larger than 64 KB
 
+    # --- security -------------------------------------------------------------
+    SESSION_LIFETIME_HOURS = int(os.environ.get("SESSION_LIFETIME_HOURS", 8))   # TMA-SR-004
+    PASSWORD_HASH_METHOD = os.environ.get("PASSWORD_HASH_METHOD", "scrypt")      # TMA-SR-002
+
     TESTING = False
     DEBUG = False
 
@@ -36,6 +40,8 @@ class ProductionConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
+    # Fast hash so the test-suite runs in seconds; production keeps scrypt.
+    PASSWORD_HASH_METHOD = "pbkdf2:sha256:1000"
 
 
 CONFIGS = {

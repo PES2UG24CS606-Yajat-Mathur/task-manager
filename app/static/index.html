@@ -3,12 +3,73 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Task Manager - create, organise and track your tasks">
   <title>Task Manager</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
 </head>
 <body>
-  <main>
-    <h1>Task Manager</h1>
-    <p>The application skeleton is running. Features arrive with the Sprint 1 pull requests.</p>
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- ===================================================== AUTH VIEW (TMA-F-001..003) -->
+  <main id="auth-view" class="auth" hidden>
+    <section class="auth-card" aria-labelledby="auth-title">
+      <h1 id="auth-title" class="brand">Task Manager</h1>
+      <p class="auth-lede">Plan the week, keep the deadlines.</p>
+
+      <div class="tabs" role="tablist" aria-label="Sign in or create an account">
+        <button type="button" role="tab" id="tab-login" aria-selected="true"
+                aria-controls="login-form">Log in</button>
+        <button type="button" role="tab" id="tab-register" aria-selected="false"
+                aria-controls="register-form">Create account</button>
+      </div>
+
+      <form id="login-form" class="stack" role="tabpanel" aria-labelledby="tab-login" novalidate>
+        <label for="login-email">Email</label>
+        <input id="login-email" name="email" type="email" autocomplete="email" required>
+        <label for="login-password">Password</label>
+        <input id="login-password" name="password" type="password"
+               autocomplete="current-password" required>
+        <p class="form-error" id="login-error" role="alert"></p>
+        <button class="btn primary" type="submit">Log in</button>
+      </form>
+
+      <form id="register-form" class="stack" role="tabpanel" aria-labelledby="tab-register"
+            novalidate hidden>
+        <label for="reg-name">Name</label>
+        <input id="reg-name" name="name" autocomplete="name" maxlength="100" required>
+        <label for="reg-email">Email</label>
+        <input id="reg-email" name="email" type="email" autocomplete="email" required>
+        <label for="reg-password">Password</label>
+        <input id="reg-password" name="password" type="password" autocomplete="new-password"
+               minlength="8" aria-describedby="reg-password-hint" required>
+        <p class="hint" id="reg-password-hint">At least 8 characters, with a letter and a number.</p>
+        <p class="form-error" id="register-error" role="alert"></p>
+        <button class="btn primary" type="submit">Create account</button>
+      </form>
+    </section>
   </main>
+
+  <!-- ===================================================== APP VIEW -->
+  <div id="app-view" hidden>
+    <header class="topbar">
+      <span class="brand small">Task Manager</span>
+      <nav class="top-actions" aria-label="Account">
+        <span class="hint">Signed in as <span id="user-name"></span></span>
+      </nav>
+    </header>
+
+    <main id="main" class="layout">
+      <section class="tasks" aria-labelledby="tasks-title">
+        <div class="tasks-head">
+          <h2 id="tasks-title">Your tasks</h2>
+        </div>
+        <div class="empty">
+          <p>You are signed in. Creating tasks is coming in the next update.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
 </body>
 </html>
