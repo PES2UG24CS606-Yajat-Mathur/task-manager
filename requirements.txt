@@ -1,0 +1,2 @@
+# Runtime dependency (the database layer uses Python's built-in sqlite3)
+Flask>=3.0,<4

@@ -1,0 +1,4 @@
+# Testing and linting (used locally and by GitHub Actions)
+pytest>=8.0
+pytest-cov>=5.0
+flake8>=7.0
