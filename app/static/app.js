@@ -174,8 +174,10 @@ function renderTasks() {
 
 function renderTask(task) {
   const statusLabel = { ACTIVE: "Active", COMPLETED: "Completed" }[task.status];
+  const priorityLabel = { HIGH: "High", MEDIUM: "Medium", LOW: "Low" }[task.priority];
   const meta = el("div", { class: "task-meta" },
-    el("span", { class: `status-${task.status}` }, statusLabel));
+    el("span", { class: `status-${task.status}` }, statusLabel),
+    el("span", { class: `priority-${task.priority}` }, `${priorityLabel} priority`));
 
   const done = task.status === "COMPLETED";
   const actions = el("div", { class: "task-actions" },
@@ -186,7 +188,7 @@ function renderTask(task) {
     el("button", { type: "button", class: "btn link", onclick: () => confirmDelete(task) },
       "Delete"));
 
-  return el("li", { class: `task s-${task.status}` },
+  return el("li", { class: `task p-${task.priority} s-${task.status}` },
     el("div", {},
       el("h3", { class: "task-title" }, task.title),
       task.description && el("p", { class: "task-desc" }, task.description),
@@ -203,6 +205,7 @@ function openTaskDialog(task = null) {
   $("#task-submit").textContent = task ? "Save changes" : "Create task";
   form.title.value = task?.title ?? "";
   form.description.value = task?.description ?? "";
+  form.priority.value = task?.priority ?? "MEDIUM";
   $("#task-dialog").showModal();
   form.title.focus();
 }
@@ -218,7 +221,11 @@ async function handleTaskSubmit(event) {
     form.title.focus();
     return;
   }
-  const body = { title: form.title.value, description: form.description.value };
+  const body = {
+    title: form.title.value,
+    description: form.description.value,
+    priority: form.priority.value,             // TMA-F-020
+  };
 
   try {
     if (state.editingTaskId === null) {

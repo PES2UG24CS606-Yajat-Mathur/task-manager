@@ -15,6 +15,8 @@ from flask import request
 
 from .errors import ValidationError
 
+PRIORITIES = ("LOW", "MEDIUM", "HIGH")          # <<enumeration>> Priority (SAD Figure 2)
+
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 MAX_NAME = 100
 MAX_TITLE, MAX_DESCRIPTION = 200, 2000
@@ -74,3 +76,11 @@ def clean_description(value) -> str:
         raise ValidationError(f"Description must be at most {MAX_DESCRIPTION} characters",
                               {"field": "description"})
     return value.strip()
+
+
+def clean_priority(value) -> str:
+    """'high' / 'HIGH' -> 'HIGH'; anything else -> 400 (TMA-F-020)."""
+    priority = str(value or "").upper()
+    if priority not in PRIORITIES:
+        raise ValidationError("Priority must be one of LOW, MEDIUM, HIGH", {"field": "priority"})
+    return priority
