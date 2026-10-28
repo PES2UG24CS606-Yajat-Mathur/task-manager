@@ -4,9 +4,9 @@ Task Module (SAD 3.4) - create, view, edit, delete, complete/reopen + history.
 Endpoints (SAD 4.3 API design)
 ------------------------------
 GET    /api/tasks                 list my tasks (newest first)        TMA-F-010
-POST   /api/tasks                 create a task                       TMA-F-010
+POST   /api/tasks                 create a task                       TMA-F-010, TMA-F-020
 GET    /api/tasks/<id>            one task                            TMA-F-014
-PATCH  /api/tasks/<id>            edit title / description            TMA-F-011
+PATCH  /api/tasks/<id>            edit title / description / priority TMA-F-011, TMA-F-020
 DELETE /api/tasks/<id>            delete (UI confirms first)          TMA-F-012
 POST   /api/tasks/<id>/complete   mark completed                      TMA-F-013
 POST   /api/tasks/<id>/reopen     mark active again                   TMA-F-013
@@ -27,11 +27,11 @@ from .db import query_all, query_one, transaction
 from .errors import ValidationError
 from .security import login_required
 from .utils import now_db, ok, to_api
-from .validators import clean_description, clean_title, get_json_body
+from .validators import clean_description, clean_priority, clean_title, get_json_body
 
 bp = Blueprint("tasks", __name__, url_prefix="/api/tasks")
 
-EDITABLE_FIELDS = {"title", "description"}
+EDITABLE_FIELDS = {"title", "description", "priority"}
 
 
 # ----------------------------------------------------------------- helpers
@@ -41,6 +41,7 @@ def task_to_dict(row) -> dict:
         "id": row["id"],
         "title": row["title"],
         "description": row["description"],
+        "priority": row["priority"],          # LOW / MEDIUM / HIGH (TMA-F-020)
         "status": row["status"],
         "completedAt": to_api(row["completed_at"]),
         "createdAt": to_api(row["created_at"]),
@@ -76,17 +77,18 @@ def create_task():
     # 1) validateInput(details) - everything is checked before anything is written
     title = clean_title(data.get("title"))
     description = clean_description(data.get("description"))
+    priority = clean_priority(data.get("priority") or "MEDIUM")    # default: MEDIUM
 
     # 2) saveTask(task) - task + its CREATED history entry in one transaction
     now = now_db()
     with transaction() as db:
         cur = db.execute(
-            """INSERT INTO tasks (user_id, title, description, created_at, updated_at)
-               VALUES (?,?,?,?,?)""",
-            (g.user["id"], title, description, now, now),
+            """INSERT INTO tasks (user_id, title, description, priority, created_at, updated_at)
+               VALUES (?,?,?,?,?,?)""",
+            (g.user["id"], title, description, priority, now, now),
         )
         task_id = cur.lastrowid
-        add_history(db, task_id, "CREATED", {"title": title})
+        add_history(db, task_id, "CREATED", {"title": title, "priority": priority})
 
     return ok({"taskId": task_id, "task": load_task(task_id)}, 201)
 
@@ -114,6 +116,8 @@ def update_task(task_id: int):
         changes["title"] = clean_title(data["title"])
     if "description" in data:
         changes["description"] = clean_description(data["description"])
+    if "priority" in data:
+        changes["priority"] = clean_priority(data["priority"])
 
     # Keep only real changes so history stays meaningful.
     changes = {k: v for k, v in changes.items() if task[k] != v}

@@ -86,6 +86,12 @@
       <input id="t-title" name="title" maxlength="200" required>
       <label for="t-description">Description <span class="hint">(optional)</span></label>
       <textarea id="t-description" name="description" rows="3" maxlength="2000"></textarea>
+      <label for="t-priority">Priority</label>
+      <select id="t-priority" name="priority">
+        <option value="HIGH">High</option>
+        <option value="MEDIUM" selected>Medium</option>
+        <option value="LOW">Low</option>
+      </select>
       <p class="form-error" id="task-error" role="alert"></p>
       <div class="dialog-actions">
         <button type="button" class="btn ghost" data-close>Cancel</button>

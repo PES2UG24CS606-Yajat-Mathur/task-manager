@@ -13,6 +13,7 @@
   --pen:     #24507a;   /* primary actions: fountain-pen blue */
   --pen-ink: #ffffff;
   --high:    #a3271d;
+  --medium:  #9a6413;
   --low:     #3c7a57;
 
   --serif: "Iowan Old Style", "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
@@ -94,13 +95,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--pen); outline: n
 .tasks-head h2 { font-family: var(--serif); font-size: var(--step-2); font-weight: 600; margin: 0; }
 .task-list { list-style: none; margin: 0.5rem 0 0; padding: 0; border-top: 1px solid var(--rule); }
 
-/* One task = one ruled planner line: [edge][body][actions] */
+/* One task = one ruled planner line: [priority edge][body][actions] (TMA-F-020) */
 .task {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: start;
   padding: 0.9rem 0.5rem 0.9rem 1rem; border-bottom: 1px solid var(--rule);
-  border-left: 5px solid var(--pen);
+  border-left: 5px solid var(--medium);
 }
-.task.s-COMPLETED { border-left-color: var(--low); }
+.task.p-HIGH { border-left-color: var(--high); }
+.task.p-LOW  { border-left-color: var(--low); }
+.task-meta .priority-HIGH { color: var(--high); font-weight: 600; }
 .task-title { font: 600 var(--step-1)/1.3 var(--serif); margin: 0; color: var(--ink); overflow-wrap: anywhere; }
 .task.s-COMPLETED .task-title { text-decoration: line-through; color: var(--muted); }
 .task-desc { margin: 0.25rem 0 0; color: var(--muted); overflow-wrap: anywhere; white-space: pre-line; }
