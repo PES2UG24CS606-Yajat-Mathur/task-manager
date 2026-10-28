@@ -9,9 +9,14 @@ bad field can never leave a half-updated record behind (TMA-NF-004).
 Feature PRs add the validators for their own fields to this file.
 """
 
+import re
+
 from flask import request
 
 from .errors import ValidationError
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
+MAX_NAME = 100
 
 
 def get_json_body() -> dict:
@@ -20,3 +25,30 @@ def get_json_body() -> dict:
     if not isinstance(data, dict):
         raise ValidationError("Request body must be a JSON object")
     return data
+
+
+# ------------------------------------------------------------------ users
+def clean_name(value) -> str:
+    name = (value or "").strip() if isinstance(value, str) else ""
+    if not name:
+        raise ValidationError("Name is required", {"field": "name"})
+    if len(name) > MAX_NAME:
+        raise ValidationError(f"Name must be at most {MAX_NAME} characters", {"field": "name"})
+    return name
+
+
+def clean_email(value) -> str:
+    email = (value or "").strip().lower() if isinstance(value, str) else ""
+    if not EMAIL_RE.match(email):
+        raise ValidationError("Enter a valid email address", {"field": "email"})
+    return email
+
+
+def clean_password(value) -> str:
+    """Password policy: 8-128 chars with at least one letter and one digit."""
+    if not isinstance(value, str) or not (8 <= len(value) <= 128):
+        raise ValidationError("Password must be 8 to 128 characters long", {"field": "password"})
+    if not (re.search(r"[A-Za-z]", value) and re.search(r"\d", value)):
+        raise ValidationError("Password must contain at least one letter and one number",
+                              {"field": "password"})
+    return value

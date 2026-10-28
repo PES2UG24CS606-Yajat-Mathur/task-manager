@@ -5,7 +5,7 @@ Architecture (SAD 3.5): a layered monolith with modular components.
 
     Presentation      app/static/ (HTML/CSS/JS single-page UI)           User / Admin UI
     API / modules     one Flask Blueprint per SAD component              (added PR by PR)
-    Cross-cutting     validators.py, errors.py, utils.py
+    Cross-cutting     security.py, validators.py, errors.py, utils.py
     Persistence       db.py + schema.sql (SQLite)                        Application Database
 
 `create_app()` builds a fully configured app; tests call it with a temporary database.
@@ -48,6 +48,9 @@ def create_app(config_name=None, overrides=None) -> Flask:
 
 def _register_modules(app: Flask):
     """Each SAD component is a Blueprint; every feature PR registers its own here."""
+    from . import auth
+    for module in (auth,):
+        app.register_blueprint(module.bp)
 
 
 def _register_core_routes(app: Flask):
