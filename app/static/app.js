@@ -5,14 +5,14 @@
      1. api()            - one function for every HTTP call (adds the token,
                            parses JSON, turns errors into exceptions)
      2. state            - the little bit of data the UI keeps in memory
-     3. auth             - register / login
+     3. auth             - register / login / logout / resume session
      4. wiring           - event listeners, started on DOMContentLoaded
 
    Security notes:
    * User-provided text is ALWAYS inserted with textContent, never innerHTML,
      so a task titled "<script>..." is shown as text (prevents XSS).
    * The session token lives in sessionStorage: it disappears when the tab is
-     closed (TMA-SR-004).
+     closed, and the server can revoke it at any time (TMA-SR-004).
    ===================================================================== */
 "use strict";
 
@@ -44,6 +44,8 @@ async function api(path, { method = "GET", body } = {}) {
   }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    // Token expired / revoked / account deactivated -> back to the login screen.
+    if (response.status === 401 && token) { endSession(); }
     throw new ApiError(response.status, data);
   }
   return data;
@@ -137,6 +139,18 @@ async function handleRegister(event) {
   }
 }
 
+function endSession() {
+  sessionStorage.removeItem(TOKEN_KEY);
+  state.user = null;
+  showAuth();
+}
+
+async function handleLogout() {
+  try { await api("/api/auth/logout", { method: "POST" }); } catch { /* already invalid */ }
+  endSession();
+  toast("Logged out");
+}
+
 /* ------------------------------------------------------ 4. App start */
 async function startApp(user) {
   state.user = user;
@@ -145,12 +159,23 @@ async function startApp(user) {
   $("#user-name").textContent = user.name;
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   // Auth screen
   $("#tab-login").addEventListener("click", () => selectAuthTab("login"));
   $("#tab-register").addEventListener("click", () => selectAuthTab("register"));
   $("#login-form").addEventListener("submit", handleLogin);
   $("#register-form").addEventListener("submit", handleRegister);
 
+  // App
+  $("#btn-logout").addEventListener("click", handleLogout);
+
+  // Resume an existing session if the tab still has a valid token
+  if (sessionStorage.getItem(TOKEN_KEY)) {
+    try {
+      const { user } = await api("/api/auth/me");
+      await startApp(user);
+      return;
+    } catch { /* token invalid -> fall through to the login screen */ }
+  }
   showAuth();
 });
