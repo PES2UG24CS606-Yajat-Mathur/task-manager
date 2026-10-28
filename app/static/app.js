@@ -6,7 +6,7 @@
                            parses JSON, turns errors into exceptions)
      2. state            - the little bit of data the UI keeps in memory
      3. auth             - register / login / logout / resume session
-     4. tasks            - list, create, edit
+     4. tasks            - list, create, edit, complete, delete
      5. wiring           - event listeners, started on DOMContentLoaded
 
    Security notes:
@@ -177,9 +177,14 @@ function renderTask(task) {
   const meta = el("div", { class: "task-meta" },
     el("span", { class: `status-${task.status}` }, statusLabel));
 
+  const done = task.status === "COMPLETED";
   const actions = el("div", { class: "task-actions" },
+    el("button", { type: "button", class: "btn link", onclick: () => toggleComplete(task) },
+      done ? "Reopen" : "Complete"),
     el("button", { type: "button", class: "btn link", onclick: () => openTaskDialog(task) },
-      "Edit"));
+      "Edit"),
+    el("button", { type: "button", class: "btn link", onclick: () => confirmDelete(task) },
+      "Delete"));
 
   return el("li", { class: `task s-${task.status}` },
     el("div", {},
@@ -228,6 +233,35 @@ async function handleTaskSubmit(event) {
   } catch (err) {
     $("#task-error").textContent = err.message;
   }
+}
+
+async function toggleComplete(task) {
+  const action = task.status === "COMPLETED" ? "reopen" : "complete";
+  try {
+    await api(`/api/tasks/${task.id}/${action}`, { method: "POST" });
+    toast(action === "complete" ? "Task completed" : "Task reopened");
+    await loadTasks();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+/** TMA-F-012: deletion only happens after the user confirms in a dialog. */
+function confirmDelete(task) {
+  const dialog = $("#confirm-dialog");
+  $("#confirm-text").textContent = `"${task.title}" will be removed permanently.`;
+  dialog.returnValue = "";
+  dialog.showModal();
+  dialog.addEventListener("close", async () => {
+    if (dialog.returnValue !== "confirm") return;
+    try {
+      await api(`/api/tasks/${task.id}`, { method: "DELETE" });
+      toast("Task deleted");
+      await loadTasks();
+    } catch (err) {
+      toast(err.message, true);
+    }
+  }, { once: true });
 }
 
 /* ------------------------------------------------------ 5. App start */

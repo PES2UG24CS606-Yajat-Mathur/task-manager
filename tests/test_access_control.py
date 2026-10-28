@@ -15,6 +15,10 @@ class TestAccessControl(APITestCase):
         return [
             self.client.get(f"/api/tasks/{tid}", headers=self.intruder),
             self.client.patch(f"/api/tasks/{tid}", json={"title": "Hacked"}, headers=self.intruder),
+            self.client.delete(f"/api/tasks/{tid}", headers=self.intruder),
+            self.client.post(f"/api/tasks/{tid}/complete", headers=self.intruder),
+            self.client.post(f"/api/tasks/{tid}/reopen", headers=self.intruder),
+            self.client.get(f"/api/tasks/{tid}/history", headers=self.intruder),
         ]
 
     def test_TC_Sec_01_cannot_access_another_users_task(self):
