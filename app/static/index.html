@@ -61,16 +61,38 @@
     </header>
 
     <main id="main" class="layout">
+      <!-- --------------------------------------- Task list (TMA-F-010..014) -->
       <section class="tasks" aria-labelledby="tasks-title">
         <div class="tasks-head">
           <h2 id="tasks-title">Your tasks</h2>
+          <button type="button" class="btn primary" id="btn-new-task">New task</button>
         </div>
-        <div class="empty">
-          <p>You are signed in. Creating tasks is coming in the next update.</p>
+
+        <p id="task-count" class="hint"></p>
+        <ol id="task-list" class="task-list"></ol>
+        <div id="empty-state" class="empty" hidden>
+          <p>Nothing here yet. Add your first task to start planning.</p>
+          <button type="button" class="btn primary" id="btn-empty-new">New task</button>
         </div>
       </section>
     </main>
   </div>
+
+  <!-- ===================================================== TASK DIALOG -->
+  <dialog id="task-dialog" aria-labelledby="task-dialog-title">
+    <form id="task-form" class="stack" novalidate>
+      <h2 id="task-dialog-title">New task</h2>
+      <label for="t-title">Title</label>
+      <input id="t-title" name="title" maxlength="200" required>
+      <label for="t-description">Description <span class="hint">(optional)</span></label>
+      <textarea id="t-description" name="description" rows="3" maxlength="2000"></textarea>
+      <p class="form-error" id="task-error" role="alert"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="submit" class="btn primary" id="task-submit">Save task</button>
+      </div>
+    </form>
+  </dialog>
 
 </body>
 </html>

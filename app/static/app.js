@@ -6,7 +6,8 @@
                            parses JSON, turns errors into exceptions)
      2. state            - the little bit of data the UI keeps in memory
      3. auth             - register / login / logout / resume session
-     4. wiring           - event listeners, started on DOMContentLoaded
+     4. tasks            - list, create, edit
+     5. wiring           - event listeners, started on DOMContentLoaded
 
    Security notes:
    * User-provided text is ALWAYS inserted with textContent, never innerHTML,
@@ -54,6 +55,8 @@ async function api(path, { method = "GET", body } = {}) {
 /* ---------------------------------------------------------- 2. State */
 const state = {
   user: null,
+  tasks: [],
+  editingTaskId: null,   // null = creating a new task
 };
 
 /* ------------------------------------------------------- DOM helpers */
@@ -126,7 +129,7 @@ async function handleRegister(event) {
   const body = { name: form.name.value, email: form.email.value, password: form.password.value };
   try {
     await api("/api/auth/register", { method: "POST", body });
-    // Log straight in with the same credentials so the user lands on the home screen.
+    // Log straight in with the same credentials so the user lands on the task list.
     const data = await api("/api/auth/login", {
       method: "POST", body: { email: body.email, password: body.password },
     });
@@ -151,12 +154,89 @@ async function handleLogout() {
   toast("Logged out");
 }
 
-/* ------------------------------------------------------ 4. App start */
+/* --------------------------------------------------------- 4. Tasks */
+async function loadTasks() {
+  try {
+    const data = await api("/api/tasks");
+    state.tasks = data.tasks;
+    renderTasks();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+function renderTasks() {
+  $("#task-list").replaceChildren(...state.tasks.map(renderTask));
+  const n = state.tasks.length;
+  $("#empty-state").hidden = n > 0;
+  $("#task-count").textContent = n ? `${n} task${n === 1 ? "" : "s"}` : "";
+}
+
+function renderTask(task) {
+  const statusLabel = { ACTIVE: "Active", COMPLETED: "Completed" }[task.status];
+  const meta = el("div", { class: "task-meta" },
+    el("span", { class: `status-${task.status}` }, statusLabel));
+
+  const actions = el("div", { class: "task-actions" },
+    el("button", { type: "button", class: "btn link", onclick: () => openTaskDialog(task) },
+      "Edit"));
+
+  return el("li", { class: `task s-${task.status}` },
+    el("div", {},
+      el("h3", { class: "task-title" }, task.title),
+      task.description && el("p", { class: "task-desc" }, task.description),
+      meta),
+    actions);
+}
+
+function openTaskDialog(task = null) {
+  state.editingTaskId = task ? task.id : null;
+  const form = $("#task-form");
+  form.reset();
+  $("#task-error").textContent = "";
+  $("#task-dialog-title").textContent = task ? "Edit task" : "New task";
+  $("#task-submit").textContent = task ? "Save changes" : "Create task";
+  form.title.value = task?.title ?? "";
+  form.description.value = task?.description ?? "";
+  $("#task-dialog").showModal();
+  form.title.focus();
+}
+
+async function handleTaskSubmit(event) {
+  event.preventDefault();
+  const form = event.target;
+  $("#task-error").textContent = "";
+
+  // Client-side check for a quick message; the server validates again (never trust the client).
+  if (!form.title.value.trim()) {
+    $("#task-error").textContent = "Title is required.";
+    form.title.focus();
+    return;
+  }
+  const body = { title: form.title.value, description: form.description.value };
+
+  try {
+    if (state.editingTaskId === null) {
+      await api("/api/tasks", { method: "POST", body });
+      toast("Task created");
+    } else {
+      await api(`/api/tasks/${state.editingTaskId}`, { method: "PATCH", body });
+      toast("Task saved");
+    }
+    $("#task-dialog").close();
+    await loadTasks();
+  } catch (err) {
+    $("#task-error").textContent = err.message;
+  }
+}
+
+/* ------------------------------------------------------ 5. App start */
 async function startApp(user) {
   state.user = user;
   $("#auth-view").hidden = true;
   $("#app-view").hidden = false;
   $("#user-name").textContent = user.name;
+  await loadTasks();
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -168,6 +248,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // App
   $("#btn-logout").addEventListener("click", handleLogout);
+  $("#btn-new-task").addEventListener("click", () => openTaskDialog());
+  $("#btn-empty-new").addEventListener("click", () => openTaskDialog());
+  $("#task-form").addEventListener("submit", handleTaskSubmit);
+
+  // Any [data-close] button closes its dialog
+  document.querySelectorAll("[data-close]").forEach((btn) =>
+    btn.addEventListener("click", () => btn.closest("dialog").close()));
 
   // Resume an existing session if the tab still has a valid token
   if (sessionStorage.getItem(TOKEN_KEY)) {

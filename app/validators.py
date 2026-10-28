@@ -17,6 +17,7 @@ from .errors import ValidationError
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 MAX_NAME = 100
+MAX_TITLE, MAX_DESCRIPTION = 200, 2000
 
 
 def get_json_body() -> dict:
@@ -52,3 +53,24 @@ def clean_password(value) -> str:
         raise ValidationError("Password must contain at least one letter and one number",
                               {"field": "password"})
     return value
+
+
+# ------------------------------------------------------------------ tasks
+def clean_title(value) -> str:
+    title = value.strip() if isinstance(value, str) else ""
+    if not title:
+        raise ValidationError("Title is required", {"field": "title"})
+    if len(title) > MAX_TITLE:
+        raise ValidationError(f"Title must be at most {MAX_TITLE} characters", {"field": "title"})
+    return title
+
+
+def clean_description(value) -> str:
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise ValidationError("Description must be text", {"field": "description"})
+    if len(value) > MAX_DESCRIPTION:
+        raise ValidationError(f"Description must be at most {MAX_DESCRIPTION} characters",
+                              {"field": "description"})
+    return value.strip()
