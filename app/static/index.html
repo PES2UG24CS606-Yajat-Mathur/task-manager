@@ -94,5 +94,16 @@
     </form>
   </dialog>
 
+  <!-- ===================================================== CONFIRM DELETE (TMA-F-012) -->
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-text">
+    <form method="dialog" class="stack">
+      <h2 id="confirm-title">Delete task?</h2>
+      <p id="confirm-text"></p>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn ghost">Keep task</button>
+        <button value="confirm" class="btn danger">Delete task</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>

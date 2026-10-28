@@ -4,6 +4,8 @@ Security building blocks shared by every module (SAD 3.9 "Security Architecture"
 | Requirement | How it is implemented here                                              |
 |-------------|-------------------------------------------------------------------------|
 | TMA-SR-002  | hash_password / verify_password -> werkzeug scrypt (salted, slow hash)  |
+| TMA-SR-003  | @login_required on every protected route, @admin_required for admin-only|
+|             | routes, ownership checks in access.py; all enforced on the server       |
 | TMA-SR-004  | random 256-bit session tokens; the database keeps only SHA-256(token);  |
 |             | expiry and logout (revocation) are checked on every request             |
 """
@@ -17,7 +19,7 @@ from flask import current_app, g, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from .db import query_one, transaction
-from .errors import Unauthorized
+from .errors import Forbidden, Unauthorized
 from .utils import now_db, to_db, utcnow
 
 
@@ -106,5 +108,19 @@ def login_required(view):
         row = _load_current_user()
         g.user = row                       # the authenticated user, for the route to use
         g.session_id = row["session_id"]
+        return view(*args, **kwargs)
+    return wrapper
+
+
+def admin_required(view):
+    """
+    TMA-SR-003: like @login_required, plus the user must have the 'admin' role, else 403.
+    Used by the administration endpoints (TMA-F-042).
+    """
+    @wraps(view)
+    @login_required
+    def wrapper(*args, **kwargs):
+        if g.user["role"] != "admin":
+            raise Forbidden("Administrator access required")
         return view(*args, **kwargs)
     return wrapper

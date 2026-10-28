@@ -1,5 +1,5 @@
 """
-Task Module (SAD 3.4) - create, view, edit tasks, with ownership checks.
+Task Module (SAD 3.4) - create, view, edit, delete, complete/reopen + history.
 
 Endpoints (SAD 4.3 API design)
 ------------------------------
@@ -7,6 +7,10 @@ GET    /api/tasks                 list my tasks (newest first)        TMA-F-010
 POST   /api/tasks                 create a task                       TMA-F-010
 GET    /api/tasks/<id>            one task                            TMA-F-014
 PATCH  /api/tasks/<id>            edit title / description            TMA-F-011
+DELETE /api/tasks/<id>            delete (UI confirms first)          TMA-F-012
+POST   /api/tasks/<id>/complete   mark completed                      TMA-F-013
+POST   /api/tasks/<id>/reopen     mark active again                   TMA-F-013
+GET    /api/tasks/<id>/history    change log (TaskHistory)
 
 Create-task flow follows SAD Figure 4:
   validateSession(token) -> createTask(details, userId) -> validateInput(details)
@@ -38,6 +42,7 @@ def task_to_dict(row) -> dict:
         "title": row["title"],
         "description": row["description"],
         "status": row["status"],
+        "completedAt": to_api(row["completed_at"]),
         "createdAt": to_api(row["created_at"]),
         "updatedAt": to_api(row["updated_at"]),
     }
@@ -125,3 +130,49 @@ def update_task(task_id: int):
         add_history(db, task_id, "UPDATED", logged)
 
     return ok({"task": load_task(task_id)})
+
+
+@bp.delete("/<int:task_id>")
+@login_required
+def delete_task(task_id: int):
+    get_owned_task(task_id)
+    with transaction() as db:
+        # ON DELETE CASCADE also removes reminders, category links and history
+        # (UML composition: Reminder and TaskHistory cannot exist without their Task).
+        db.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    return ok({"message": "Task deleted"})
+
+
+def _set_status(task_id: int, status: str):
+    task = get_owned_task(task_id)
+    if task["status"] != status:
+        now = now_db()
+        with transaction() as db:
+            db.execute("UPDATE tasks SET status = ?, completed_at = ?, updated_at = ? "
+                       "WHERE id = ?",
+                       (status, now if status == "COMPLETED" else None, now, task_id))
+            add_history(db, task_id, "COMPLETED" if status == "COMPLETED" else "REOPENED",
+                        {"status": status})
+    return ok({"task": load_task(task_id)})
+
+
+@bp.post("/<int:task_id>/complete")
+@login_required
+def complete_task(task_id: int):          # Task.markComplete()
+    return _set_status(task_id, "COMPLETED")
+
+
+@bp.post("/<int:task_id>/reopen")
+@login_required
+def reopen_task(task_id: int):            # Task.reopen()
+    return _set_status(task_id, "ACTIVE")
+
+
+@bp.get("/<int:task_id>/history")
+@login_required
+def task_history(task_id: int):
+    get_owned_task(task_id)
+    rows = query_all("SELECT * FROM task_history WHERE task_id = ? ORDER BY id", (task_id,))
+    return ok({"history": [{"id": r["id"], "changeType": r["change_type"],
+                            "details": json.loads(r["details"]),
+                            "timestamp": to_api(r["timestamp"])} for r in rows]})
