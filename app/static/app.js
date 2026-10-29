@@ -10,7 +10,8 @@
      5. dashboard        - active / overdue / completed summary
      6. categories       - suggestions, filter options, sidebar chips
      7. notifications    - unread badge (polled), list, preferences
-     8. wiring           - event listeners, started on DOMContentLoaded
+     8. admin            - users and security events (administrators only)
+     9. wiring           - event listeners, started on DOMContentLoaded
 
    Security notes:
    * User-provided text is ALWAYS inserted with textContent, never innerHTML,
@@ -482,7 +483,61 @@ async function handlePrefsSubmit(event) {
   }
 }
 
-/* ------------------------------------------------------ 8. App start */
+/* ---------------------------------------------------------- 8. Admin */
+// TMA-F-042. Hiding the Admin button from normal users is only for convenience:
+// every /api/admin call is refused by the server (403) unless the user is an admin.
+async function openAdmin() {
+  $(".tasks").hidden = true;
+  $("#admin-view").hidden = false;
+  await loadAdmin();
+  $("#admin-title").focus();
+}
+
+function closeAdmin() {
+  $("#admin-view").hidden = true;
+  $(".tasks").hidden = false;
+}
+
+async function loadAdmin() {
+  try {
+    const [{ users }, { events }] = await Promise.all([
+      api("/api/admin/users"), api("/api/admin/security-events?limit=25"),
+    ]);
+    $("#admin-users").replaceChildren(...users.map((u) => {
+      const self = u.id === state.user.id;          // no buttons on my own row
+      return el("tr", {},
+        el("td", {}, u.name), el("td", {}, u.email), el("td", {}, u.role),
+        el("td", {}, u.taskCount), el("td", {}, u.isActive ? "Active" : "Deactivated"),
+        el("td", {}, self ? el("span", { class: "hint" }, "You") : [
+          el("button", {
+            type: "button", class: "btn link",
+            onclick: () => adminUpdate(u.id, { isActive: !u.isActive }),
+          }, u.isActive ? "Deactivate" : "Activate"),
+          el("button", {
+            type: "button", class: "btn link",
+            onclick: () => adminUpdate(u.id, { role: u.role === "admin" ? "user" : "admin" }),
+          }, u.role === "admin" ? "Make user" : "Make admin"),
+        ]));
+    }));
+    $("#admin-events").replaceChildren(...events.map((e) => el("tr", {},
+      el("td", {}, formatWhen(e.createdAt)), el("td", {}, e.type),
+      el("td", {}, e.email ?? ""), el("td", {}, e.ip ?? ""))));
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function adminUpdate(userId, changes) {
+  try {
+    await api(`/api/admin/users/${userId}`, { method: "PATCH", body: changes });
+    toast("User updated");
+    await loadAdmin();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+/* ------------------------------------------------------ 9. App start */
 /** Reload everything that a task change can affect. */
 async function refreshAll() {
   await Promise.all([loadTasks(), loadSummary(), loadCategories()]);
@@ -493,6 +548,8 @@ async function startApp(user) {
   $("#auth-view").hidden = true;
   $("#app-view").hidden = false;
   $("#user-name").textContent = user.name;
+  $("#btn-admin").hidden = user.role !== "admin";
+  closeAdmin();
 
   try {
     const prefs = await loadPreferences();
@@ -523,6 +580,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("#btn-read-all").addEventListener("click", markAllRead);
   $("#btn-preferences").addEventListener("click", openPreferences);
   $("#prefs-form").addEventListener("submit", handlePrefsSubmit);
+  $("#btn-admin").addEventListener("click", openAdmin);
+  $("#btn-admin-close").addEventListener("click", closeAdmin);
   $("#btn-new-task").addEventListener("click", () => openTaskDialog());
   $("#btn-empty-new").addEventListener("click", () => openTaskDialog());
   $("#task-form").addEventListener("submit", handleTaskSubmit);

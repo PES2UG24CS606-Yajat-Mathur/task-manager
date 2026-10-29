@@ -75,6 +75,19 @@ def revoke_session(session_id: int):
                    (now_db(), session_id))
 
 
+def revoke_all_sessions(user_id: int, db=None):
+    """
+    Log a user out everywhere (used when an admin deactivates the account).
+    Pass `db` to take part in the caller's open transaction.
+    """
+    sql = "UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL"
+    if db is not None:
+        db.execute(sql, (now_db(), user_id))
+    else:
+        with transaction() as tx:
+            tx.execute(sql, (now_db(), user_id))
+
+
 def _bearer_token():
     """Extract the token from the header 'Authorization: Bearer <token>'."""
     header = request.headers.get("Authorization", "")

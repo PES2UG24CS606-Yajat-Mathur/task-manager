@@ -59,6 +59,8 @@
         <button type="button" class="btn ghost" id="btn-notifications" aria-haspopup="dialog">
           Notifications <span class="badge" id="notif-count" hidden>0</span>
         </button>
+        <!-- TMA-F-042: only shown to administrators (the server checks the role anyway) -->
+        <button type="button" class="btn ghost" id="btn-admin" hidden>Admin</button>
         <button type="button" class="btn ghost" id="btn-preferences">Preferences</button>
         <button type="button" class="btn ghost" id="btn-logout">Log out</button>
       </nav>
@@ -143,6 +145,33 @@
         <div id="empty-state" class="empty" hidden>
           <p>Nothing here yet. Add your first task to start planning.</p>
           <button type="button" class="btn primary" id="btn-empty-new">New task</button>
+        </div>
+      </section>
+
+      <!-- --------------------------------------- Administration (TMA-F-042, SR-005) -->
+      <section id="admin-view" class="admin" aria-labelledby="admin-title" hidden>
+        <div class="tasks-head">
+          <h2 id="admin-title" tabindex="-1">Administration</h2>
+          <button type="button" class="btn ghost" id="btn-admin-close">Back to tasks</button>
+        </div>
+        <h3>Users</h3>
+        <div class="table-wrap">
+          <table>
+            <caption class="visually-hidden">Registered users</caption>
+            <thead><tr><th scope="col">Name</th><th scope="col">Email</th>
+              <th scope="col">Role</th><th scope="col">Tasks</th><th scope="col">Status</th>
+              <th scope="col">Actions</th></tr></thead>
+            <tbody id="admin-users"></tbody>
+          </table>
+        </div>
+        <h3>Recent security events</h3>
+        <div class="table-wrap">
+          <table>
+            <caption class="visually-hidden">Security events</caption>
+            <thead><tr><th scope="col">Time</th><th scope="col">Event</th>
+              <th scope="col">Email</th><th scope="col">IP</th></tr></thead>
+            <tbody id="admin-events"></tbody>
+          </table>
         </div>
       </section>
     </main>

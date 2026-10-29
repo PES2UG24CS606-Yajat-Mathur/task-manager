@@ -14,8 +14,9 @@ Architecture (SAD 3.5): a layered monolith with modular components.
 import logging
 import os
 
-from flask import Flask, request, send_from_directory
+from flask import Flask, redirect, request, send_from_directory
 from flask.logging import default_handler
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import CONFIGS
 from .db import init_db, register_db
@@ -31,6 +32,12 @@ def create_app(config_name=None, overrides=None) -> Flask:
     app.config.update(overrides or {})
     app.logger.setLevel(logging.WARNING if app.testing else logging.INFO)
     app.logger.removeHandler(default_handler)   # log once, via the root handler below
+
+    if app.config["TRUST_PROXY"]:
+        # Behind a reverse proxy that ends TLS, trust its X-Forwarded-Proto / -For headers,
+        # so request.is_secure tells the truth about the browser's connection (TMA-SR-001).
+        # Off by default: otherwise any client could fake "https" with that header.
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
     logging.basicConfig(level=logging.WARNING if app.testing else logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -49,13 +56,21 @@ def create_app(config_name=None, overrides=None) -> Flask:
 
 def _register_modules(app: Flask):
     """Each SAD component is a Blueprint; every feature PR registers its own here."""
-    from . import auth, dashboard, notifications, scheduling, tasks
-    for module in (auth, tasks, scheduling, dashboard, notifications):
+    from . import admin, auth, dashboard, notifications, scheduling, tasks
+    for module in (auth, tasks, scheduling, dashboard, notifications, admin):
         app.register_blueprint(module.bp)
     app.cli.add_command(notifications.send_reminders_command)   # flask --app run send-reminders
+    app.cli.add_command(admin.create_admin_command)             # flask --app run create-admin
 
 
 def _register_security_hooks(app: Flask):
+    @app.before_request
+    def enforce_https():
+        """TMA-SR-001: with FORCE_HTTPS on, a plain-HTTP request is redirected to HTTPS."""
+        if app.config["FORCE_HTTPS"] and not request.is_secure:
+            return redirect(request.url.replace("http://", "https://", 1), code=301)
+        return None
+
     @app.after_request
     def security_headers(response):
         """
@@ -76,6 +91,10 @@ def _register_security_hooks(app: Flask):
                      "script-src 'self'; frame-ancestors 'none'; base-uri 'self'")
         if request.path.startswith("/api/"):
             h["Cache-Control"] = "no-store"
+        if app.config["FORCE_HTTPS"] and request.is_secure:
+            # HSTS (TMA-SR-001): the browser will use HTTPS for this site for a year,
+            # even if the user types http://
+            h["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
 

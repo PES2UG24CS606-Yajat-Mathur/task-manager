@@ -27,6 +27,10 @@ class Config:
     PASSWORD_HASH_METHOD = os.environ.get("PASSWORD_HASH_METHOD", "scrypt")      # TMA-SR-002
     MAX_FAILED_LOGINS = int(os.environ.get("MAX_FAILED_LOGINS", 5))       # per email ...
     FAILED_LOGIN_WINDOW_MIN = int(os.environ.get("FAILED_LOGIN_WINDOW_MIN", 15))  # ... per window
+    # TMA-SR-001: redirect http:// to https:// and send HSTS
+    FORCE_HTTPS = _env_bool("FORCE_HTTPS", False)
+    # Behind a reverse proxy (nginx, Render, ...) that ends TLS and sets X-Forwarded-Proto
+    TRUST_PROXY = _env_bool("TRUST_PROXY", False)
 
     # --- notifications (TMA-F-024, TMA-F-040) ------------------------------------
     REMINDER_POLL_SECONDS = int(os.environ.get("REMINDER_POLL_SECONDS", 30))  # scheduler interval
@@ -41,13 +45,14 @@ class DevelopmentConfig(Config):
 
 
 class ProductionConfig(Config):
-    pass
+    FORCE_HTTPS = _env_bool("FORCE_HTTPS", True)   # HTTPS is on by default in production
 
 
 class TestingConfig(Config):
     TESTING = True
     # Fast hash so the test-suite runs in seconds; production keeps scrypt.
     PASSWORD_HASH_METHOD = "pbkdf2:sha256:1000"
+    FORCE_HTTPS = False
 
 
 CONFIGS = {
