@@ -86,12 +86,26 @@
       <input id="t-title" name="title" maxlength="200" required>
       <label for="t-description">Description <span class="hint">(optional)</span></label>
       <textarea id="t-description" name="description" rows="3" maxlength="2000"></textarea>
-      <label for="t-priority">Priority</label>
-      <select id="t-priority" name="priority">
-        <option value="HIGH">High</option>
-        <option value="MEDIUM" selected>Medium</option>
-        <option value="LOW">Low</option>
-      </select>
+      <div class="row">
+        <div class="field">
+          <label for="t-priority">Priority</label>
+          <select id="t-priority" name="priority">
+            <option value="HIGH">High</option>
+            <option value="MEDIUM" selected>Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+        </div>
+        <!-- TMA-F-023: shown in the user's local time, sent to the API as UTC -->
+        <div class="field">
+          <label for="t-due">Due date <span class="hint">(optional)</span></label>
+          <input id="t-due" name="dueDate" type="datetime-local">
+        </div>
+      </div>
+      <!-- TMA-F-022: type new names or pick existing ones from the suggestions -->
+      <label for="t-categories">Categories <span class="hint">(comma separated)</span></label>
+      <input id="t-categories" name="categories" list="category-options"
+             placeholder="e.g. College, SE project">
+      <datalist id="category-options"></datalist>
       <p class="form-error" id="task-error" role="alert"></p>
       <div class="dialog-actions">
         <button type="button" class="btn ghost" data-close>Cancel</button>

@@ -14,12 +14,14 @@ import re
 from flask import request
 
 from .errors import ValidationError
+from .utils import parse_client_datetime, to_db
 
 PRIORITIES = ("LOW", "MEDIUM", "HIGH")          # <<enumeration>> Priority (SAD Figure 2)
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 MAX_NAME = 100
 MAX_TITLE, MAX_DESCRIPTION = 200, 2000
+MAX_CATEGORY = 50                               # longest category / tag name (TMA-F-022)
 
 
 def get_json_body() -> dict:
@@ -84,3 +86,55 @@ def clean_priority(value) -> str:
     if priority not in PRIORITIES:
         raise ValidationError("Priority must be one of LOW, MEDIUM, HIGH", {"field": "priority"})
     return priority
+
+
+# ------------------------------------------------------- due dates (TMA-F-023)
+def clean_optional_datetime(value, field: str):
+    """
+    Validate an optional date/time sent by the client and return it as DB text (UTC).
+
+        None or ""                      -> None   (no value / clear the existing value)
+        "2026-10-30"                    -> "2026-10-30T23:59:59"   (end of that day, UTC)
+        "2026-10-30T17:00:00Z"          -> "2026-10-30T17:00:00"
+        "2026-10-30T17:00:00+05:30"     -> "2026-10-30T11:30:00"   (converted to UTC)
+        "next friday", 42, ...          -> 400 ValidationError naming the field
+
+    `field` is the JSON key ("dueDate", later also "reminderTime"), so the error message
+    tells the user exactly which input to fix.
+    """
+    if value in (None, ""):
+        return None
+    if not isinstance(value, str):
+        raise ValidationError(f"{field} must be an ISO-8601 date string", {"field": field})
+    try:
+        return to_db(parse_client_datetime(value))
+    except ValueError:
+        raise ValidationError(f"{field} must be a valid date, e.g. 2026-10-30 or "
+                              f"2026-10-30T17:00:00Z", {"field": field}) from None
+
+
+# ---------------------------------------------------- categories (TMA-F-022)
+def clean_categories(value) -> list:
+    """
+    Validate a list of category names and return it cleaned:
+      * surrounding spaces removed, empty names dropped
+      * duplicates removed case-insensitively, first spelling kept, order kept
+        (["College", "college", "SE"] -> ["College", "SE"])
+    None means "no categories". Anything that is not a list of strings -> 400.
+    """
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise ValidationError("categories must be a list of names", {"field": "categories"})
+    seen, result = set(), []
+    for raw in value:
+        name = raw.strip()
+        if not name:
+            continue
+        if len(name) > MAX_CATEGORY:
+            raise ValidationError(f"Category names must be at most {MAX_CATEGORY} characters",
+                                  {"field": "categories"})
+        if name.lower() not in seen:
+            seen.add(name.lower())
+            result.append(name)
+    return result
