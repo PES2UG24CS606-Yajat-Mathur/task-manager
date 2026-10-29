@@ -4,13 +4,18 @@ Task Module (SAD 3.4) - create, view, edit, delete, complete/reopen + history.
 Endpoints (SAD 4.3 API design)
 ------------------------------
 GET    /api/tasks                 list my tasks (newest first)        TMA-F-010
-POST   /api/tasks                 create a task                       TMA-F-010, TMA-F-020
+POST   /api/tasks                 create a task                       TMA-F-010, F-020, F-022, F-023
 GET    /api/tasks/<id>            one task                            TMA-F-014
-PATCH  /api/tasks/<id>            edit title / description / priority TMA-F-011, TMA-F-020
+PATCH  /api/tasks/<id>            edit fields                         TMA-F-011, F-020, F-022, F-023
 DELETE /api/tasks/<id>            delete (UI confirms first)          TMA-F-012
 POST   /api/tasks/<id>/complete   mark completed                      TMA-F-013
 POST   /api/tasks/<id>/reopen     mark active again                   TMA-F-013
 GET    /api/tasks/<id>/history    change log (TaskHistory)
+
+Task fields in the JSON API
+---------------------------
+title, description, priority (LOW/MEDIUM/HIGH), status, dueDate (ISO-8601, UTC with 'Z'),
+categories (list of names), completedAt, createdAt, updatedAt.
 
 Create-task flow follows SAD Figure 4:
   validateSession(token) -> createTask(details, userId) -> validateInput(details)
@@ -25,32 +30,43 @@ from flask import Blueprint, g
 from .access import get_owned_task
 from .db import query_all, query_one, transaction
 from .errors import ValidationError
+from .scheduling import categories_for_tasks, ensure_categories, set_task_categories
 from .security import login_required
 from .utils import now_db, ok, to_api
-from .validators import clean_description, clean_priority, clean_title, get_json_body
+from .validators import (clean_categories, clean_description, clean_optional_datetime,
+                         clean_priority, clean_title, get_json_body)
 
 bp = Blueprint("tasks", __name__, url_prefix="/api/tasks")
 
-EDITABLE_FIELDS = {"title", "description", "priority"}
+# JSON keys a PATCH may contain. Anything else (e.g. "user_id") is rejected with 400.
+EDITABLE_FIELDS = {"title", "description", "priority", "dueDate", "categories"}
 
 
 # ----------------------------------------------------------------- helpers
-def task_to_dict(row) -> dict:
-    """API representation of a task row."""
+def task_to_dict(row, categories=None) -> dict:
+    """API representation of one task row (+ its category names)."""
     return {
         "id": row["id"],
         "title": row["title"],
         "description": row["description"],
         "priority": row["priority"],          # LOW / MEDIUM / HIGH (TMA-F-020)
         "status": row["status"],
+        "dueDate": to_api(row["due_date"]),   # TMA-F-023, None when not set
+        "categories": categories or [],       # TMA-F-022
         "completedAt": to_api(row["completed_at"]),
         "createdAt": to_api(row["created_at"]),
         "updatedAt": to_api(row["updated_at"]),
     }
 
 
+def serialize_tasks(rows) -> list:
+    """Turn many task rows into API dicts, loading all their categories in one query."""
+    cats = categories_for_tasks([r["id"] for r in rows])
+    return [task_to_dict(r, cats[r["id"]]) for r in rows]
+
+
 def load_task(task_id: int) -> dict:
-    return task_to_dict(query_one("SELECT * FROM tasks WHERE id = ?", (task_id,)))
+    return serialize_tasks([query_one("SELECT * FROM tasks WHERE id = ?", (task_id,))])[0]
 
 
 def add_history(db, task_id: int, change_type: str, details: dict):
@@ -66,7 +82,7 @@ def list_tasks():
     # The WHERE user_id filter is what keeps other users' tasks out (TMA-F-014).
     rows = query_all("SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at DESC, id DESC",
                      (g.user["id"],))
-    return ok({"tasks": [task_to_dict(r) for r in rows], "count": len(rows)})
+    return ok({"tasks": serialize_tasks(rows), "count": len(rows)})
 
 
 @bp.post("")
@@ -78,16 +94,20 @@ def create_task():
     title = clean_title(data.get("title"))
     description = clean_description(data.get("description"))
     priority = clean_priority(data.get("priority") or "MEDIUM")    # default: MEDIUM
+    due_date = clean_optional_datetime(data.get("dueDate"), "dueDate")      # TMA-F-023
+    categories = clean_categories(data.get("categories"))                   # TMA-F-022
 
-    # 2) saveTask(task) - task + its CREATED history entry in one transaction
+    # 2) saveTask(task) - task + category links + CREATED history in ONE transaction
     now = now_db()
     with transaction() as db:
         cur = db.execute(
-            """INSERT INTO tasks (user_id, title, description, priority, created_at, updated_at)
-               VALUES (?,?,?,?,?,?)""",
-            (g.user["id"], title, description, priority, now, now),
+            """INSERT INTO tasks (user_id, title, description, priority, due_date,
+                                  created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?)""",
+            (g.user["id"], title, description, priority, due_date, now, now),
         )
         task_id = cur.lastrowid
+        set_task_categories(db, task_id, ensure_categories(db, g.user["id"], categories))
         add_history(db, task_id, "CREATED", {"title": title, "priority": priority})
 
     return ok({"taskId": task_id, "task": load_task(task_id)}, 201)
@@ -118,19 +138,28 @@ def update_task(task_id: int):
         changes["description"] = clean_description(data["description"])
     if "priority" in data:
         changes["priority"] = clean_priority(data["priority"])
+    if "dueDate" in data:                       # null / "" clears the due date
+        changes["due_date"] = clean_optional_datetime(data["dueDate"], "dueDate")
+    # Categories live in another table, so they are handled separately from `changes`.
+    new_categories = clean_categories(data["categories"]) if "categories" in data else None
 
     # Keep only real changes so history stays meaningful.
     changes = {k: v for k, v in changes.items() if task[k] != v}
-    if not changes:
+    if not changes and new_categories is None:
         return ok({"task": load_task(task_id)})
 
     logged = dict(changes)
+    if new_categories is not None:
+        logged["categories"] = new_categories
     changes["updated_at"] = now_db()
     with transaction() as db:
         # Column names come from our own whitelist above, never from user input.
         assignments = ", ".join(f"{col} = ?" for col in changes)
         db.execute(f"UPDATE tasks SET {assignments} WHERE id = ?",
                    (*changes.values(), task_id))
+        if new_categories is not None:
+            set_task_categories(db, task_id,
+                                ensure_categories(db, g.user["id"], new_categories))
         add_history(db, task_id, "UPDATED", logged)
 
     return ok({"task": load_task(task_id)})

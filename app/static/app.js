@@ -7,7 +7,8 @@
      2. state            - the little bit of data the UI keeps in memory
      3. auth             - register / login / logout / resume session
      4. tasks            - list, create, edit, complete, delete
-     5. wiring           - event listeners, started on DOMContentLoaded
+     5. categories       - suggestions for the task form
+     6. wiring           - event listeners, started on DOMContentLoaded
 
    Security notes:
    * User-provided text is ALWAYS inserted with textContent, never innerHTML,
@@ -56,6 +57,7 @@ async function api(path, { method = "GET", body } = {}) {
 const state = {
   user: null,
   tasks: [],
+  categories: [],        // [{id, name, taskCount}] for suggestions (TMA-F-022)
   editingTaskId: null,   // null = creating a new task
 };
 
@@ -87,6 +89,27 @@ function toast(message, isError = false) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { box.hidden = true; }, 3500);
 }
+
+/* ------------------------------------------------------ Date helpers */
+// The API always speaks UTC ("2026-10-25T12:30:00Z"); the screen always shows the
+// user's local time. These helpers convert between the two (TMA-F-023).
+const fmtDateTime = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+const fmtDay = new Intl.DateTimeFormat(undefined, { day: "numeric" });
+const fmtMon = new Intl.DateTimeFormat(undefined, { month: "short" });
+
+/** UTC ISO string -> "29 Oct 2026, 5:30 pm" in local time ("" for none). */
+const formatWhen = (iso) => (iso ? fmtDateTime.format(new Date(iso)) : "");
+
+/** UTC ISO string -> value for <input type="datetime-local"> (local time, no seconds). */
+function toLocalInput(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** datetime-local value (local time) -> UTC ISO string for the API, or null if empty. */
+const fromLocalInput = (value) => (value ? new Date(value).toISOString() : null);
 
 /* ---------------------------------------------------------- 3. Auth */
 function showAuth() {
@@ -173,11 +196,21 @@ function renderTasks() {
 }
 
 function renderTask(task) {
+  // Left column: a "date stamp" with the due day and month, or a dash when there is none.
+  const due = task.dueDate ? new Date(task.dueDate) : null;
+  const stamp = due
+    ? el("div", { class: "stamp", "aria-hidden": "true" },
+        el("span", { class: "day" }, fmtDay.format(due)),
+        el("span", { class: "mon" }, fmtMon.format(due)))
+    : el("div", { class: "stamp none", "aria-hidden": "true" }, el("span", { class: "day" }, "–"));
+
   const statusLabel = { ACTIVE: "Active", COMPLETED: "Completed" }[task.status];
   const priorityLabel = { HIGH: "High", MEDIUM: "Medium", LOW: "Low" }[task.priority];
   const meta = el("div", { class: "task-meta" },
     el("span", { class: `status-${task.status}` }, statusLabel),
-    el("span", { class: `priority-${task.priority}` }, `${priorityLabel} priority`));
+    el("span", { class: `priority-${task.priority}` }, `${priorityLabel} priority`),
+    due && el("span", {}, `Due ${formatWhen(task.dueDate)}`),                 // TMA-F-023
+    ...task.categories.map((c) => el("span", { class: "chip" }, c)));       // TMA-F-022
 
   const done = task.status === "COMPLETED";
   const actions = el("div", { class: "task-actions" },
@@ -189,6 +222,7 @@ function renderTask(task) {
       "Delete"));
 
   return el("li", { class: `task p-${task.priority} s-${task.status}` },
+    stamp,
     el("div", {},
       el("h3", { class: "task-title" }, task.title),
       task.description && el("p", { class: "task-desc" }, task.description),
@@ -206,6 +240,8 @@ function openTaskDialog(task = null) {
   form.title.value = task?.title ?? "";
   form.description.value = task?.description ?? "";
   form.priority.value = task?.priority ?? "MEDIUM";
+  form.dueDate.value = toLocalInput(task?.dueDate);
+  form.categories.value = (task?.categories ?? []).join(", ");
   $("#task-dialog").showModal();
   form.title.focus();
 }
@@ -225,6 +261,9 @@ async function handleTaskSubmit(event) {
     title: form.title.value,
     description: form.description.value,
     priority: form.priority.value,             // TMA-F-020
+    dueDate: fromLocalInput(form.dueDate.value),  // TMA-F-023 (null clears it)
+    // "College, SE , " -> ["College", "SE"]   (TMA-F-022)
+    categories: form.categories.value.split(",").map((s) => s.trim()).filter(Boolean),
   };
 
   try {
@@ -236,7 +275,7 @@ async function handleTaskSubmit(event) {
       toast("Task saved");
     }
     $("#task-dialog").close();
-    await loadTasks();
+    await refreshAll();
   } catch (err) {
     $("#task-error").textContent = err.message;
   }
@@ -247,7 +286,7 @@ async function toggleComplete(task) {
   try {
     await api(`/api/tasks/${task.id}/${action}`, { method: "POST" });
     toast(action === "complete" ? "Task completed" : "Task reopened");
-    await loadTasks();
+    await refreshAll();
   } catch (err) {
     toast(err.message, true);
   }
@@ -264,20 +303,38 @@ function confirmDelete(task) {
     try {
       await api(`/api/tasks/${task.id}`, { method: "DELETE" });
       toast("Task deleted");
-      await loadTasks();
+      await refreshAll();
     } catch (err) {
       toast(err.message, true);
     }
   }, { once: true });
 }
 
-/* ------------------------------------------------------ 5. App start */
+/* ---------------------------------------------------- 5. Categories */
+/** TMA-F-022: load my categories and offer them as suggestions in the task form. */
+async function loadCategories() {
+  try {
+    const { categories } = await api("/api/categories");
+    state.categories = categories;
+    $("#category-options").replaceChildren(
+      ...categories.map((c) => el("option", { value: c.name })));
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+/* ------------------------------------------------------ 6. App start */
+/** Reload everything that a task change can affect. */
+async function refreshAll() {
+  await Promise.all([loadTasks(), loadCategories()]);
+}
+
 async function startApp(user) {
   state.user = user;
   $("#auth-view").hidden = true;
   $("#app-view").hidden = false;
   $("#user-name").textContent = user.name;
-  await loadTasks();
+  await refreshAll();
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
