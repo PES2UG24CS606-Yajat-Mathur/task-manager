@@ -15,7 +15,11 @@ GET    /api/tasks/<id>/history    change log (TaskHistory)
 Task fields in the JSON API
 ---------------------------
 title, description, priority (LOW/MEDIUM/HIGH), status, isOverdue, dueDate (ISO-8601,
-UTC with 'Z'), categories (list of names), completedAt, createdAt, updatedAt.
+UTC with 'Z'), categories (list of names), nextReminder, completedAt, createdAt, updatedAt.
+
+POST /api/tasks may also carry "reminderTime" or "minutesBefore" to set a first reminder
+in the same step (TMA-F-024). New tasks get the user's default priority, and the list
+uses the user's default sort, unless the request says otherwise (TMA-F-041).
 
 `status` is what the user SEES: ACTIVE, COMPLETED or OVERDUE. Only ACTIVE / COMPLETED are
 stored; OVERDUE is worked out from the due date on every read (app/status.py, TMA-F-021).
@@ -33,7 +37,8 @@ from flask import Blueprint, g, request
 from .access import get_owned_task
 from .db import query_all, query_one, transaction
 from .errors import ValidationError
-from .scheduling import categories_for_tasks, ensure_categories, set_task_categories
+from .scheduling import (categories_for_tasks, ensure_categories, next_reminders_for_tasks,
+                         resolve_reminder_time, set_task_categories)
 from .search import build_task_query
 from .security import login_required
 from .status import effective_status_sql
@@ -52,8 +57,8 @@ TASK_SELECT = f"SELECT t.*, {effective_status_sql('t')} AS effective_status FROM
 
 
 # ----------------------------------------------------------------- helpers
-def task_to_dict(row, categories=None) -> dict:
-    """API representation of one task row (+ its category names)."""
+def task_to_dict(row, categories=None, next_reminder=None) -> dict:
+    """API representation of one task row (+ its category names and next reminder)."""
     # Rows from TASK_SELECT carry the derived status; a plain row falls back to the stored one.
     status = row["effective_status"] if "effective_status" in row.keys() else row["status"]
     return {
@@ -65,6 +70,7 @@ def task_to_dict(row, categories=None) -> dict:
         "isOverdue": status == "OVERDUE",
         "dueDate": to_api(row["due_date"]),   # TMA-F-023, None when not set
         "categories": categories or [],       # TMA-F-022
+        "nextReminder": to_api(next_reminder),  # TMA-F-024, earliest reminder not yet sent
         "completedAt": to_api(row["completed_at"]),
         "createdAt": to_api(row["created_at"]),
         "updatedAt": to_api(row["updated_at"]),
@@ -72,9 +78,10 @@ def task_to_dict(row, categories=None) -> dict:
 
 
 def serialize_tasks(rows) -> list:
-    """Turn many task rows into API dicts, loading all their categories in one query."""
-    cats = categories_for_tasks([r["id"] for r in rows])
-    return [task_to_dict(r, cats[r["id"]]) for r in rows]
+    """Turn many task rows into API dicts: one query for categories, one for reminders."""
+    ids = [r["id"] for r in rows]
+    cats, reminders = categories_for_tasks(ids), next_reminders_for_tasks(ids)
+    return [task_to_dict(r, cats[r["id"]], reminders[r["id"]]) for r in rows]
 
 
 def load_task(task_id: int) -> dict:
@@ -94,7 +101,8 @@ def add_history(db, task_id: int, change_type: str, details: dict):
 def list_tasks():
     # The Search Module builds the query from ?q=&status=&priority=&category=&sort=&order=
     # and ALWAYS filters on user_id, which keeps other users' tasks out (TMA-F-014).
-    sql, params = build_task_query(g.user["id"], request.args, now_db())
+    sql, params = build_task_query(g.user["id"], request.args, now_db(),
+                                   default_sort=g.user["default_sort"])     # TMA-F-041
     rows = query_all(sql, params)
     return ok({"tasks": serialize_tasks(rows), "count": len(rows)})
 
@@ -107,12 +115,14 @@ def create_task():
     # 1) validateInput(details) - everything is checked before anything is written
     title = clean_title(data.get("title"))
     description = clean_description(data.get("description"))
-    priority = clean_priority(data.get("priority") or "MEDIUM")    # default: MEDIUM
+    # No priority given -> the user's default from Preferences (TMA-F-041), MEDIUM at first
+    priority = clean_priority(data.get("priority") or g.user["default_priority"])
     status = clean_status(data.get("status") or "ACTIVE")           # TMA-F-021
     due_date = clean_optional_datetime(data.get("dueDate"), "dueDate")      # TMA-F-023
     categories = clean_categories(data.get("categories"))                   # TMA-F-022
+    reminder_time = resolve_reminder_time(data, due_date)   # TMA-F-024, None = no reminder
 
-    # 2) saveTask(task) - task + category links + CREATED history in ONE transaction
+    # 2) saveTask(task) - task + categories + reminder + history in ONE transaction
     now = now_db()
     with transaction() as db:
         cur = db.execute(
@@ -124,6 +134,9 @@ def create_task():
         )
         task_id = cur.lastrowid
         set_task_categories(db, task_id, ensure_categories(db, g.user["id"], categories))
+        if reminder_time:
+            db.execute("INSERT INTO reminders (task_id, reminder_time) VALUES (?, ?)",
+                       (task_id, reminder_time))
         add_history(db, task_id, "CREATED", {"title": title, "priority": priority})
 
     return ok({"taskId": task_id, "task": load_task(task_id)}, 201)

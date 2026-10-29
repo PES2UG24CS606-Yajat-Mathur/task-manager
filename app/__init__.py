@@ -48,9 +48,10 @@ def create_app(config_name=None, overrides=None) -> Flask:
 
 def _register_modules(app: Flask):
     """Each SAD component is a Blueprint; every feature PR registers its own here."""
-    from . import auth, dashboard, scheduling, tasks
-    for module in (auth, tasks, scheduling, dashboard):
+    from . import auth, dashboard, notifications, scheduling, tasks
+    for module in (auth, tasks, scheduling, dashboard, notifications):
         app.register_blueprint(module.bp)
+    app.cli.add_command(notifications.send_reminders_command)   # flask --app run send-reminders
 
 
 def _register_core_routes(app: Flask):
