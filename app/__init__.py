@@ -14,13 +14,14 @@ Architecture (SAD 3.5): a layered monolith with modular components.
 import logging
 import os
 
-from flask import Flask, redirect, request, send_from_directory
+from flask import Flask, jsonify, redirect, request, send_from_directory
 from flask.logging import default_handler
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import CONFIGS
-from .db import init_db, register_db
+from .db import get_db, init_db, register_db
 from .errors import register_error_handlers
+from .utils import now_db, to_api
 
 
 def create_app(config_name=None, overrides=None) -> Flask:
@@ -103,3 +104,19 @@ def _register_core_routes(app: Flask):
     def index():
         """Serve the single-page UI."""
         return send_from_directory(app.static_folder, "index.html")
+
+    @app.get("/api/health")
+    def health():
+        """
+        TMA-NF-002: health check for uptime monitoring. A monitor (e.g. UptimeRobot) calls
+        this every few minutes; its monthly report is the availability figure (99.5%).
+        It needs no login and reveals nothing private. 200 = ok, 503 = database unreachable.
+        """
+        try:
+            get_db().execute("SELECT 1").fetchone()
+            db_status = "ok"
+        except Exception:                      # database missing, locked or corrupt
+            db_status = "unavailable"
+        healthy = db_status == "ok"
+        return jsonify({"status": "ok" if healthy else "degraded", "database": db_status,
+                        "time": to_api(now_db())}), (200 if healthy else 503)

@@ -1,7 +1,14 @@
 /* =====================================================================
    Task Manager - styles
-   Concept: a paper planner. Tasks sit on ruled lines with a coloured edge;
-   everything else stays quiet.
+   Concept: a paper planner. Tasks sit on ruled lines with a coloured
+   priority edge and a "date stamp" column; everything else stays quiet.
+
+   TMA-NF-005 (responsive and accessible):
+   * works from 360 px phones to wide desktops (breakpoints at the end)
+   * dark mode follows the operating system setting
+   * visible keyboard focus, skip link, 44 px touch targets
+   * no animation for people who ask their OS for reduced motion
+   * text colours keep at least 4.5:1 contrast (WCAG AA) in both themes
    ===================================================================== */
 
 :root {
@@ -25,9 +32,31 @@
   --step-2:  1.6rem;
   --step-3:  2.25rem;
   --radius:  6px;
+  --focus:   #24507a;   /* keyboard focus ring */
+  color-scheme: light dark;   /* native controls (date picker, scrollbars) follow the theme */
+}
+
+/* Dark mode: the same design with the colours turned around */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:   #141b1f;
+    --surface: #1c252a;
+    --ink:     #e4ebe8;
+    --muted:   #9fb0ad;
+    --rule:    #2f3c41;
+    --pen:     #8fb6e0;
+    --pen-ink: #0f1c28;
+    --high:    #f08a7e;
+    --medium:  #e3b35c;
+    --low:     #82c7a0;
+    --focus:   #8fb6e0;
+  }
+  .btn.danger, .toast.error, .badge { color: #1a0d0b; }   /* dark text on the light red */
 }
 
 * { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }   /* phones keep our font sizes in landscape */
 
 body {
   margin: 0;
@@ -41,19 +70,31 @@ h2 { font-size: var(--step-1); }
 
 [hidden] { display: none !important; }
 
+/* ---------- accessibility helpers (TMA-NF-005) ---------- */
+.skip-link {
+  position: absolute; left: 1rem; top: -3rem; padding: 0.5rem 1rem; z-index: 30;
+  background: var(--pen); color: var(--pen-ink); border-radius: var(--radius);
+}
+.skip-link:focus { top: 1rem; }            /* appears on the first Tab press */
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
 /* ---------- form controls ---------- */
 label { font-weight: 600; font-size: var(--step--1); }
 input, select, textarea {
   width: 100%; font: inherit; color: var(--ink);
   background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
-  padding: 0.55rem 0.7rem;
+  padding: 0.55rem 0.7rem; min-height: 2.75rem;          /* 44 px touch target */
 }
 textarea { resize: vertical; }
 fieldset { border: 1px solid var(--rule); border-radius: var(--radius); padding: 0.75rem 1rem; }
 legend { font-weight: 600; font-size: var(--step--1); padding: 0 0.25rem; }
 .check { display: flex; gap: 0.6rem; align-items: center; font-weight: 400; font-size: var(--step-0); }
-.check input { width: 1.2rem; height: 1.2rem; }
-input:focus, select:focus, textarea:focus { border-color: var(--pen); outline: none; }
+.check { min-height: 2.75rem; }
+.check input { width: 1.2rem; height: 1.2rem; min-height: 0; }
+input:focus, select:focus, textarea:focus { border-color: var(--pen); }
 
 .stack { display: flex; flex-direction: column; gap: 0.4rem; }
 .stack > .btn, .stack > .dialog-actions { margin-top: 0.75rem; }
@@ -65,14 +106,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--pen); outline: n
 /* ---------- buttons ---------- */
 .btn {
   font: inherit; font-weight: 600; cursor: pointer; border-radius: var(--radius);
-  padding: 0.55rem 1rem; border: 1px solid transparent; background: none; color: var(--ink);
+  padding: 0.55rem 1rem; min-height: 2.75rem; border: 1px solid transparent;
+  background: none; color: var(--ink);
 }
 .btn.primary { background: var(--pen); color: var(--pen-ink); }
 .btn.primary:hover { filter: brightness(1.1); }
 .btn.ghost { border-color: var(--rule); }
 .btn.ghost:hover { border-color: var(--muted); }
 .btn.danger { background: var(--high); color: #fff; }
-.btn.link { padding: 0.3rem 0.5rem; color: var(--pen); font-weight: 500; }
+.btn.link { padding: 0.3rem 0.5rem; min-height: 2.25rem; color: var(--pen); font-weight: 500; }
 .btn.link:hover { text-decoration: underline; }
 /* Unread-notifications count on the Notifications button (TMA-F-040) */
 .badge {
@@ -147,7 +189,7 @@ h3 { font-size: var(--step-0); margin-top: 1.75rem; color: var(--muted); font-we
   font: inherit; font-size: var(--step--1); border: 1px solid var(--rule); border-radius: 999px;
   padding: 0.1rem 0.6rem; background: none; color: var(--ink);
 }
-button.chip { cursor: pointer; padding: 0.2rem 0.7rem; }
+button.chip { cursor: pointer; padding: 0.2rem 0.7rem; min-height: 2rem; }
 .chip[aria-pressed="true"] { background: var(--pen); color: var(--pen-ink); border-color: var(--pen); }
 
 /* Search / filter / sort toolbar (TMA-F-030..032) */
