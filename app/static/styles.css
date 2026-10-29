@@ -168,6 +168,16 @@ button.chip { cursor: pointer; padding: 0.2rem 0.7rem; }
 
 .empty { padding: 3rem 1rem; text-align: center; color: var(--muted); }
 
+/* ---------- admin tables (TMA-F-042) ---------- */
+.table-wrap { overflow-x: auto; }          /* wide tables scroll inside, not the page */
+table { width: 100%; border-collapse: collapse; font-size: var(--step--1); }
+th, td { text-align: left; padding: 0.55rem 0.5rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+.visually-hidden {                         /* read by screen readers, not shown */
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
 /* ---------- dialogs ---------- */
 dialog {
   width: min(100% - 2rem, 34rem); max-height: calc(100vh - 2rem); overflow: auto;

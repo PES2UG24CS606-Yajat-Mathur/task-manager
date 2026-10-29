@@ -47,6 +47,11 @@ CREATE TABLE IF NOT EXISTS tasks (
     created_at    TEXT    NOT NULL,
     updated_at    TEXT    NOT NULL
 );
+-- TMA-NF-001: the task list, filters and dashboard always ask for "this user's tasks",
+-- usually by status or due date. These indexes let SQLite jump straight to those rows
+-- instead of reading the whole table. (IF NOT EXISTS: added to existing databases too.)
+CREATE INDEX IF NOT EXISTS idx_tasks_user_status ON tasks(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_tasks_user_due    ON tasks(user_id, due_date);
 
 -- ------------------------------------------------------------ Category
 CREATE TABLE IF NOT EXISTS categories (
@@ -62,6 +67,7 @@ CREATE TABLE IF NOT EXISTS task_categories (
     category_id  INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
     PRIMARY KEY (task_id, category_id)
 );
+CREATE INDEX IF NOT EXISTS idx_task_categories_category ON task_categories(category_id);
 
 -- ------------------------------------------------------------ Reminder
 CREATE TABLE IF NOT EXISTS reminders (
