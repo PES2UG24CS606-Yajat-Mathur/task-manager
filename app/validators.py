@@ -14,6 +14,7 @@ import re
 from flask import request
 
 from .errors import ValidationError
+from .status import STORED_STATUSES
 from .utils import parse_client_datetime, to_db
 
 PRIORITIES = ("LOW", "MEDIUM", "HIGH")          # <<enumeration>> Priority (SAD Figure 2)
@@ -86,6 +87,21 @@ def clean_priority(value) -> str:
     if priority not in PRIORITIES:
         raise ValidationError("Priority must be one of LOW, MEDIUM, HIGH", {"field": "priority"})
     return priority
+
+
+def clean_status(value) -> str:
+    """
+    TMA-F-021: a user may set ACTIVE or COMPLETED ('completed' is accepted too).
+    OVERDUE is refused with its own message, because the app sets it automatically
+    when the due date passes (see app/status.py).
+    """
+    status = str(value or "").upper()
+    if status == "OVERDUE":
+        raise ValidationError("OVERDUE is set automatically when the due date passes",
+                              {"field": "status"})
+    if status not in STORED_STATUSES:
+        raise ValidationError("Status must be ACTIVE or COMPLETED", {"field": "status"})
+    return status
 
 
 # ------------------------------------------------------- due dates (TMA-F-023)
