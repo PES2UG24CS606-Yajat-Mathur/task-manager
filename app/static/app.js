@@ -8,7 +8,7 @@
      3. auth             - register / login / logout / resume session
      4. tasks            - list, create, edit, complete, delete
      5. dashboard        - active / overdue / completed summary
-     6. categories       - suggestions for the task form
+     6. categories       - suggestions, filter options, sidebar chips
      7. wiring           - event listeners, started on DOMContentLoaded
 
    Security notes:
@@ -179,9 +179,18 @@ async function handleLogout() {
 }
 
 /* --------------------------------------------------------- 4. Tasks */
+/** Read the filter form into a query string, e.g. "q=lab&status=OVERDUE&sort=priority". */
+function filterQuery() {
+  const params = new URLSearchParams();
+  for (const [key, value] of new FormData($("#filters"))) {
+    if (value) params.set(key, value);          // leave out "Any" (empty) choices
+  }
+  return params.toString();
+}
+
 async function loadTasks() {
   try {
-    const data = await api("/api/tasks");
+    const data = await api(`/api/tasks?${filterQuery()}`);
     state.tasks = data.tasks;
     renderTasks();
   } catch (err) {
@@ -192,8 +201,13 @@ async function loadTasks() {
 function renderTasks() {
   $("#task-list").replaceChildren(...state.tasks.map(renderTask));
   const n = state.tasks.length;
-  $("#empty-state").hidden = n > 0;
-  $("#task-count").textContent = n ? `${n} task${n === 1 ? "" : "s"}` : "";
+  // Is a search or filter active? (sort and order only reorder, they never hide tasks)
+  const filtered = filterQuery().replace(/(^|&)(sort|order)=[^&]*/g, "") !== "";
+  // The "add your first task" message is only for a truly empty list, not "no matches".
+  $("#empty-state").hidden = n > 0 || filtered;
+  $("#task-count").textContent = filtered
+    ? `${n} matching task${n === 1 ? "" : "s"}`
+    : (n ? `${n} task${n === 1 ? "" : "s"}` : "");
 }
 
 function renderTask(task) {
@@ -336,13 +350,35 @@ async function loadSummary() {
 }
 
 /* ---------------------------------------------------- 6. Categories */
-/** TMA-F-022: load my categories and offer them as suggestions in the task form. */
+/**
+ * TMA-F-022 / F-031: load my categories and show them in three places:
+ *   the task form suggestions, the Category filter, and the sidebar chips.
+ */
 async function loadCategories() {
   try {
     const { categories } = await api("/api/categories");
     state.categories = categories;
     $("#category-options").replaceChildren(
       ...categories.map((c) => el("option", { value: c.name })));
+
+    // Filter dropdown: keep the current choice if that category still exists
+    const select = $("#f-category");
+    const current = select.value;
+    select.replaceChildren(el("option", { value: "" }, "Any"),
+      ...categories.map((c) => el("option", { value: c.name }, c.name)));
+    select.value = categories.some((c) => c.name === current) ? current : "";
+
+    // Sidebar chips work as a quick filter: click to filter, click again to clear
+    $("#category-list").replaceChildren(...(categories.length
+      ? categories.map((c) => el("li", {}, el("button", {
+          type: "button", class: "chip", "aria-pressed": String(select.value === c.name),
+          onclick: () => {
+            select.value = select.value === c.name ? "" : c.name;
+            loadCategories();
+            loadTasks();
+          },
+        }, `${c.name} (${c.taskCount})`)))
+      : [el("li", { class: "hint" }, "Add categories when you create a task.")]));
   } catch (err) {
     toast(err.message, true);
   }
@@ -362,6 +398,12 @@ async function startApp(user) {
   await refreshAll();
 }
 
+/** Wait until the user stops typing for `ms` milliseconds before calling fn. */
+function debounce(fn, ms) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   // Auth screen
   $("#tab-login").addEventListener("click", () => selectAuthTab("login"));
@@ -374,6 +416,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("#btn-new-task").addEventListener("click", () => openTaskDialog());
   $("#btn-empty-new").addEventListener("click", () => openTaskDialog());
   $("#task-form").addEventListener("submit", handleTaskSubmit);
+
+  // Search / filter / sort: dropdowns reload at once, typing reloads after a short pause
+  $("#filters").addEventListener("submit", (e) => e.preventDefault());
+  $("#filters").addEventListener("change", () => { loadTasks(); loadCategories(); });
+  $("#f-q").addEventListener("input", debounce(loadTasks, 250));
 
   // Any [data-close] button closes its dialog
   document.querySelectorAll("[data-close]").forEach((btn) =>

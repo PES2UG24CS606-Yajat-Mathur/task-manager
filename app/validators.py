@@ -18,6 +18,7 @@ from .status import STORED_STATUSES
 from .utils import parse_client_datetime, to_db
 
 PRIORITIES = ("LOW", "MEDIUM", "HIGH")          # <<enumeration>> Priority (SAD Figure 2)
+SORT_FIELDS = ("due_date", "priority", "status", "created_at", "title")   # TMA-F-032
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 MAX_NAME = 100
@@ -154,3 +155,12 @@ def clean_categories(value) -> list:
             seen.add(name.lower())
             result.append(name)
     return result
+
+
+# ------------------------------------------------------------ sorting (TMA-F-032)
+def clean_sort(value) -> str:
+    """One of SORT_FIELDS (default due_date), else 400."""
+    sort = str(value or "due_date").lower()
+    if sort not in SORT_FIELDS:
+        raise ValidationError(f"sort must be one of {', '.join(SORT_FIELDS)}", {"field": "sort"})
+    return sort
