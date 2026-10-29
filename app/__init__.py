@@ -48,8 +48,8 @@ def create_app(config_name=None, overrides=None) -> Flask:
 
 def _register_modules(app: Flask):
     """Each SAD component is a Blueprint; every feature PR registers its own here."""
-    from . import auth, scheduling, tasks
-    for module in (auth, tasks, scheduling):
+    from . import auth, dashboard, scheduling, tasks
+    for module in (auth, tasks, scheduling, dashboard):
         app.register_blueprint(module.bp)
 
 

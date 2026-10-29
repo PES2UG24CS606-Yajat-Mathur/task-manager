@@ -4,9 +4,9 @@ Task Module (SAD 3.4) - create, view, edit, delete, complete/reopen + history.
 Endpoints (SAD 4.3 API design)
 ------------------------------
 GET    /api/tasks                 list my tasks (newest first)        TMA-F-010
-POST   /api/tasks                 create a task                       TMA-F-010, F-020, F-022, F-023
+POST   /api/tasks                 create a task                       TMA-F-010, F-020..023
 GET    /api/tasks/<id>            one task                            TMA-F-014
-PATCH  /api/tasks/<id>            edit fields                         TMA-F-011, F-020, F-022, F-023
+PATCH  /api/tasks/<id>            edit fields                         TMA-F-011, F-020..023
 DELETE /api/tasks/<id>            delete (UI confirms first)          TMA-F-012
 POST   /api/tasks/<id>/complete   mark completed                      TMA-F-013
 POST   /api/tasks/<id>/reopen     mark active again                   TMA-F-013
@@ -14,8 +14,11 @@ GET    /api/tasks/<id>/history    change log (TaskHistory)
 
 Task fields in the JSON API
 ---------------------------
-title, description, priority (LOW/MEDIUM/HIGH), status, dueDate (ISO-8601, UTC with 'Z'),
-categories (list of names), completedAt, createdAt, updatedAt.
+title, description, priority (LOW/MEDIUM/HIGH), status, isOverdue, dueDate (ISO-8601,
+UTC with 'Z'), categories (list of names), completedAt, createdAt, updatedAt.
+
+`status` is what the user SEES: ACTIVE, COMPLETED or OVERDUE. Only ACTIVE / COMPLETED are
+stored; OVERDUE is worked out from the due date on every read (app/status.py, TMA-F-021).
 
 Create-task flow follows SAD Figure 4:
   validateSession(token) -> createTask(details, userId) -> validateInput(details)
@@ -32,25 +35,33 @@ from .db import query_all, query_one, transaction
 from .errors import ValidationError
 from .scheduling import categories_for_tasks, ensure_categories, set_task_categories
 from .security import login_required
+from .status import effective_status_sql
 from .utils import now_db, ok, to_api
 from .validators import (clean_categories, clean_description, clean_optional_datetime,
-                         clean_priority, clean_title, get_json_body)
+                         clean_priority, clean_status, clean_title, get_json_body)
 
 bp = Blueprint("tasks", __name__, url_prefix="/api/tasks")
 
 # JSON keys a PATCH may contain. Anything else (e.g. "user_id") is rejected with 400.
-EDITABLE_FIELDS = {"title", "description", "priority", "dueDate", "categories"}
+EDITABLE_FIELDS = {"title", "description", "priority", "status", "dueDate", "categories"}
+
+# Every task read goes through this SELECT, so OVERDUE is computed the same way everywhere.
+# Queries using it must pass the current time as the named parameter :now.
+TASK_SELECT = f"SELECT t.*, {effective_status_sql('t')} AS effective_status FROM tasks t"
 
 
 # ----------------------------------------------------------------- helpers
 def task_to_dict(row, categories=None) -> dict:
     """API representation of one task row (+ its category names)."""
+    # Rows from TASK_SELECT carry the derived status; a plain row falls back to the stored one.
+    status = row["effective_status"] if "effective_status" in row.keys() else row["status"]
     return {
         "id": row["id"],
         "title": row["title"],
         "description": row["description"],
         "priority": row["priority"],          # LOW / MEDIUM / HIGH (TMA-F-020)
-        "status": row["status"],
+        "status": status,                     # ACTIVE / COMPLETED / OVERDUE (TMA-F-021)
+        "isOverdue": status == "OVERDUE",
         "dueDate": to_api(row["due_date"]),   # TMA-F-023, None when not set
         "categories": categories or [],       # TMA-F-022
         "completedAt": to_api(row["completed_at"]),
@@ -66,7 +77,8 @@ def serialize_tasks(rows) -> list:
 
 
 def load_task(task_id: int) -> dict:
-    return serialize_tasks([query_one("SELECT * FROM tasks WHERE id = ?", (task_id,))])[0]
+    row = query_one(f"{TASK_SELECT} WHERE t.id = :id", {"id": task_id, "now": now_db()})
+    return serialize_tasks([row])[0]
 
 
 def add_history(db, task_id: int, change_type: str, details: dict):
@@ -80,8 +92,9 @@ def add_history(db, task_id: int, change_type: str, details: dict):
 @login_required
 def list_tasks():
     # The WHERE user_id filter is what keeps other users' tasks out (TMA-F-014).
-    rows = query_all("SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at DESC, id DESC",
-                     (g.user["id"],))
+    rows = query_all(f"{TASK_SELECT} WHERE t.user_id = :user_id "
+                     f"ORDER BY t.created_at DESC, t.id DESC",
+                     {"user_id": g.user["id"], "now": now_db()})
     return ok({"tasks": serialize_tasks(rows), "count": len(rows)})
 
 
@@ -94,6 +107,7 @@ def create_task():
     title = clean_title(data.get("title"))
     description = clean_description(data.get("description"))
     priority = clean_priority(data.get("priority") or "MEDIUM")    # default: MEDIUM
+    status = clean_status(data.get("status") or "ACTIVE")           # TMA-F-021
     due_date = clean_optional_datetime(data.get("dueDate"), "dueDate")      # TMA-F-023
     categories = clean_categories(data.get("categories"))                   # TMA-F-022
 
@@ -101,10 +115,11 @@ def create_task():
     now = now_db()
     with transaction() as db:
         cur = db.execute(
-            """INSERT INTO tasks (user_id, title, description, priority, due_date,
-                                  created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?)""",
-            (g.user["id"], title, description, priority, due_date, now, now),
+            """INSERT INTO tasks (user_id, title, description, priority, status, due_date,
+                                  completed_at, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (g.user["id"], title, description, priority, status, due_date,
+             now if status == "COMPLETED" else None, now, now),
         )
         task_id = cur.lastrowid
         set_task_categories(db, task_id, ensure_categories(db, g.user["id"], categories))
@@ -138,6 +153,8 @@ def update_task(task_id: int):
         changes["description"] = clean_description(data["description"])
     if "priority" in data:
         changes["priority"] = clean_priority(data["priority"])
+    if "status" in data:                        # TMA-F-021: ACTIVE <-> COMPLETED
+        changes["status"] = clean_status(data["status"])
     if "dueDate" in data:                       # null / "" clears the due date
         changes["due_date"] = clean_optional_datetime(data["dueDate"], "dueDate")
     # Categories live in another table, so they are handled separately from `changes`.
@@ -151,7 +168,10 @@ def update_task(task_id: int):
     logged = dict(changes)
     if new_categories is not None:
         logged["categories"] = new_categories
-    changes["updated_at"] = now_db()
+    now = now_db()
+    if "status" in changes:                     # keep completed_at consistent with status
+        changes["completed_at"] = now if changes["status"] == "COMPLETED" else None
+    changes["updated_at"] = now
     with transaction() as db:
         # Column names come from our own whitelist above, never from user input.
         assignments = ", ".join(f"{col} = ?" for col in changes)
@@ -160,7 +180,10 @@ def update_task(task_id: int):
         if new_categories is not None:
             set_task_categories(db, task_id,
                                 ensure_categories(db, g.user["id"], new_categories))
-        add_history(db, task_id, "UPDATED", logged)
+        # A status change is logged like the Complete / Reopen buttons log it.
+        change_type = {"COMPLETED": "COMPLETED", "ACTIVE": "REOPENED"}.get(
+            changes.get("status"), "UPDATED")
+        add_history(db, task_id, change_type, logged)
 
     return ok({"task": load_task(task_id)})
 

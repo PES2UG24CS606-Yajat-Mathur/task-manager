@@ -7,8 +7,9 @@
      2. state            - the little bit of data the UI keeps in memory
      3. auth             - register / login / logout / resume session
      4. tasks            - list, create, edit, complete, delete
-     5. categories       - suggestions for the task form
-     6. wiring           - event listeners, started on DOMContentLoaded
+     5. dashboard        - active / overdue / completed summary
+     6. categories       - suggestions for the task form
+     7. wiring           - event listeners, started on DOMContentLoaded
 
    Security notes:
    * User-provided text is ALWAYS inserted with textContent, never innerHTML,
@@ -204,7 +205,7 @@ function renderTask(task) {
         el("span", { class: "mon" }, fmtMon.format(due)))
     : el("div", { class: "stamp none", "aria-hidden": "true" }, el("span", { class: "day" }, "–"));
 
-  const statusLabel = { ACTIVE: "Active", COMPLETED: "Completed" }[task.status];
+  const statusLabel = { ACTIVE: "Active", COMPLETED: "Completed", OVERDUE: "Overdue" }[task.status];
   const priorityLabel = { HIGH: "High", MEDIUM: "Medium", LOW: "Low" }[task.priority];
   const meta = el("div", { class: "task-meta" },
     el("span", { class: `status-${task.status}` }, statusLabel),
@@ -240,6 +241,8 @@ function openTaskDialog(task = null) {
   form.title.value = task?.title ?? "";
   form.description.value = task?.description ?? "";
   form.priority.value = task?.priority ?? "MEDIUM";
+  // An overdue task is stored as ACTIVE, so the select shows "Active" for it.
+  form.status.value = task?.status === "COMPLETED" ? "COMPLETED" : "ACTIVE";
   form.dueDate.value = toLocalInput(task?.dueDate);
   form.categories.value = (task?.categories ?? []).join(", ");
   $("#task-dialog").showModal();
@@ -261,6 +264,7 @@ async function handleTaskSubmit(event) {
     title: form.title.value,
     description: form.description.value,
     priority: form.priority.value,             // TMA-F-020
+    status: form.status.value,                 // TMA-F-021
     dueDate: fromLocalInput(form.dueDate.value),  // TMA-F-023 (null clears it)
     // "College, SE , " -> ["College", "SE"]   (TMA-F-022)
     categories: form.categories.value.split(",").map((s) => s.trim()).filter(Boolean),
@@ -310,7 +314,28 @@ function confirmDelete(task) {
   }, { once: true });
 }
 
-/* ---------------------------------------------------- 5. Categories */
+/* ----------------------------------------------- 5. Dashboard summary */
+/** TMA-F-033: active / overdue / completed counts, completion bar, due this week. */
+async function loadSummary() {
+  try {
+    const { summary, dueSoon } = await api("/api/dashboard/summary");
+    $("#count-active").textContent = summary.active;
+    $("#count-overdue").textContent = summary.overdue;
+    $("#count-completed").textContent = summary.completed;
+    $("#progress-bar").style.width = `${summary.completionRate}%`;
+    $("#progress-text").textContent = summary.total
+      ? `${summary.completionRate}% of ${summary.total} tasks completed`
+      : "No tasks yet.";
+    $("#due-soon").replaceChildren(...(dueSoon.length
+      ? dueSoon.map((t) => el("li", {}, t.title,
+          el("span", { class: "when" }, formatWhen(t.dueDate))))
+      : [el("li", { class: "hint" }, "Nothing due this week.")]));
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+/* ---------------------------------------------------- 6. Categories */
 /** TMA-F-022: load my categories and offer them as suggestions in the task form. */
 async function loadCategories() {
   try {
@@ -323,10 +348,10 @@ async function loadCategories() {
   }
 }
 
-/* ------------------------------------------------------ 6. App start */
+/* ------------------------------------------------------ 7. App start */
 /** Reload everything that a task change can affect. */
 async function refreshAll() {
-  await Promise.all([loadTasks(), loadCategories()]);
+  await Promise.all([loadTasks(), loadSummary(), loadCategories()]);
 }
 
 async function startApp(user) {
