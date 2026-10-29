@@ -25,6 +25,8 @@ class Config:
     # --- security -------------------------------------------------------------
     SESSION_LIFETIME_HOURS = int(os.environ.get("SESSION_LIFETIME_HOURS", 8))   # TMA-SR-004
     PASSWORD_HASH_METHOD = os.environ.get("PASSWORD_HASH_METHOD", "scrypt")      # TMA-SR-002
+    MAX_FAILED_LOGINS = int(os.environ.get("MAX_FAILED_LOGINS", 5))       # per email ...
+    FAILED_LOGIN_WINDOW_MIN = int(os.environ.get("FAILED_LOGIN_WINDOW_MIN", 15))  # ... per window
 
     # --- notifications (TMA-F-024, TMA-F-040) ------------------------------------
     REMINDER_POLL_SECONDS = int(os.environ.get("REMINDER_POLL_SECONDS", 30))  # scheduler interval

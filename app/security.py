@@ -8,9 +8,12 @@ Security building blocks shared by every module (SAD 3.9 "Security Architecture"
 |             | routes, ownership checks in access.py; all enforced on the server       |
 | TMA-SR-004  | random 256-bit session tokens; the database keeps only SHA-256(token);  |
 |             | expiry and logout (revocation) are checked on every request             |
+| TMA-SR-005  | log_security_event() -> security_events table + application log, after |
+|             | a filter that removes anything that looks like a password or a token    |
 """
 
 import hashlib
+import json
 import secrets
 from datetime import timedelta
 from functools import wraps
@@ -18,9 +21,13 @@ from functools import wraps
 from flask import current_app, g, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from .db import query_one, transaction
+from .db import get_db, query_one, transaction
 from .errors import Forbidden, Unauthorized
 from .utils import now_db, to_db, utcnow
+
+# Keys that must never be written to a log, whatever a caller passes in (TMA-SR-005).
+_SENSITIVE_KEYS = {"password", "new_password", "token", "sessiontoken", "authorization",
+                   "password_hash", "secret"}
 
 
 # ------------------------------------------------------------- passwords
@@ -121,6 +128,55 @@ def admin_required(view):
     @login_required
     def wrapper(*args, **kwargs):
         if g.user["role"] != "admin":
+            # TMA-SR-005: a non-admin trying an admin page is worth recording
+            log_security_event("ACCESS_DENIED", user_id=g.user["id"],
+                               details={"path": request.path, "reason": "admin role required"})
             raise Forbidden("Administrator access required")
         return view(*args, **kwargs)
     return wrapper
+
+
+# ------------------------------------------------- security event log (TMA-SR-005)
+def _is_sensitive(key: str) -> bool:
+    """'Password', 'new_password', 'X-Auth-Token', 'sessionToken' ... -> True."""
+    norm = key.lower().replace("-", "").replace("_", "")
+    return (norm in {k.replace("_", "") for k in _SENSITIVE_KEYS}
+            or "password" in norm or "token" in norm)
+
+
+def _scrub(details: dict) -> dict:
+    """Return a copy of `details` with every sensitive key removed, at any depth."""
+    clean = {}
+    for key, value in (details or {}).items():
+        if _is_sensitive(str(key)):
+            continue
+        clean[key] = _scrub(value) if isinstance(value, dict) else value
+    return clean
+
+
+def log_security_event(event_type: str, user_id=None, email=None, details=None):
+    """
+    Record a security-relevant event (failed login, logout, access denied, admin action...)
+    in the security_events table AND in the application log. Never records passwords or
+    tokens: `details` goes through _scrub() first.
+    """
+    safe = _scrub(details)
+    ip = request.remote_addr if request else None
+    # Callers log AFTER their own transaction has finished, so this insert (autocommit)
+    # stands on its own: the audit record is kept even when the operation itself failed.
+    get_db().execute(
+        """INSERT INTO security_events (event_type, user_id, email, ip_address, details,
+                                        created_at) VALUES (?,?,?,?,?,?)""",
+        (event_type, user_id, email, ip, json.dumps(safe), now_db()),
+    )
+    current_app.logger.info("security_event=%s user_id=%s email=%s ip=%s details=%s",
+                            event_type, user_id, email, ip, safe)
+
+
+def recent_failed_logins(email: str, minutes: int) -> int:
+    """How many LOGIN_FAILED events this email had in the last `minutes` minutes."""
+    since = to_db(utcnow() - timedelta(minutes=minutes))
+    row = query_one("""SELECT COUNT(*) AS n FROM security_events
+                        WHERE event_type = 'LOGIN_FAILED' AND email = ? AND created_at >= ?""",
+                    (email, since))
+    return row["n"]

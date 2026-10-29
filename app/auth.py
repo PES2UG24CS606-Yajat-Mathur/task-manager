@@ -13,16 +13,21 @@ PATCH /api/auth/me         {name?, email?}          -> 200 {user}   (User.update
 Login follows SAD Figure 3: UI -> authenticate(email, password) -> getUserByEmail ->
 on success return a session token (the browser sends it back as
 "Authorization: Bearer <token>" on every later request).
+
+Security logging (TMA-SR-005): REGISTER, LOGIN_SUCCESS, LOGIN_FAILED, LOGIN_BLOCKED and
+LOGOUT events are recorded in security_events, never with the password.
+Brute-force protection: after MAX_FAILED_LOGINS (5) failures for one email within
+FAILED_LOGIN_WINDOW_MIN (15) minutes, logins for that email get 429 until the window passes.
 """
 
 import sqlite3
 
-from flask import Blueprint, g
+from flask import Blueprint, current_app, g
 
 from .db import query_one, transaction
-from .errors import APIError, Conflict, ValidationError
-from .security import (create_session, hash_password, login_required, revoke_session,
-                       verify_password)
+from .errors import APIError, Conflict, TooManyRequests, ValidationError
+from .security import (create_session, hash_password, log_security_event, login_required,
+                       recent_failed_logins, revoke_session, verify_password)
 from .utils import now_db, ok, to_api
 from .validators import clean_email, clean_name, clean_password, get_json_body
 
@@ -72,6 +77,7 @@ def register():
 
     user_id = create_user(name, email, password)
     user = query_one("SELECT * FROM users WHERE id = ?", (user_id,))
+    log_security_event("REGISTER", user_id=user_id, email=email)
     return ok({"user": user_to_dict(user)}, 201)
 
 
@@ -83,6 +89,14 @@ def login():
     password = data.get("password")
     if not email or not isinstance(password, str) or not password:
         raise ValidationError("Email and password are required")
+
+    # Brute-force protection (SAD 3.9 STRIDE: spoofing / denial of service).
+    # Checked BEFORE the password, so even the right password waits out the lockout.
+    cfg = current_app.config
+    if recent_failed_logins(email, cfg["FAILED_LOGIN_WINDOW_MIN"]) >= cfg["MAX_FAILED_LOGINS"]:
+        log_security_event("LOGIN_BLOCKED", email=email)
+        raise TooManyRequests(f"Too many failed attempts. Try again in "
+                              f"{cfg['FAILED_LOGIN_WINDOW_MIN']} minutes.")
 
     user = query_one("SELECT * FROM users WHERE email = ?", (email,))
     if user is None:
@@ -96,11 +110,17 @@ def login():
     if not valid:
         # TMA-F-003: reject, create NO session, and use the same message for
         # "no such account" and "wrong password" so emails cannot be enumerated.
+        # TMA-SR-005: record the failure (the attempted password is never logged).
+        log_security_event("LOGIN_FAILED", user_id=user["id"] if user else None, email=email,
+                           details={"reason": "invalid credentials"})
         raise APIError(401, "INVALID_CREDENTIALS", "Invalid email or password")
     if not user["is_active"]:
+        log_security_event("LOGIN_FAILED", user_id=user["id"], email=email,
+                           details={"reason": "account deactivated"})
         raise APIError(403, "ACCOUNT_DEACTIVATED", "This account has been deactivated")
 
     token, expires_at = create_session(user["id"])
+    log_security_event("LOGIN_SUCCESS", user_id=user["id"], email=email)
     return ok({
         "userId": user["id"],
         "sessionToken": token,          # shown to the client once; DB keeps only its hash
@@ -113,6 +133,7 @@ def login():
 @login_required
 def logout():
     revoke_session(g.session_id)        # TMA-F-004 / TMA-SR-004: token is dead from now on
+    log_security_event("LOGOUT", user_id=g.user["id"], email=g.user["email"])
     return ok({"message": "Logged out"})
 
 
