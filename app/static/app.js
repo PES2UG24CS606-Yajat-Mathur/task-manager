@@ -232,14 +232,22 @@ function renderTask(task) {
     task.nextReminder && el("span", {}, `Reminder ${formatWhen(task.nextReminder)}`),  // F-024
     ...task.categories.map((c) => el("span", { class: "chip" }, c)));       // TMA-F-022
 
+  // TMA-NF-005: a screen reader hears "Delete Buy milk", not just "Delete" three times over
   const done = task.status === "COMPLETED";
   const actions = el("div", { class: "task-actions" },
-    el("button", { type: "button", class: "btn link", onclick: () => toggleComplete(task) },
-      done ? "Reopen" : "Complete"),
-    el("button", { type: "button", class: "btn link", onclick: () => openTaskDialog(task) },
-      "Edit"),
-    el("button", { type: "button", class: "btn link", onclick: () => confirmDelete(task) },
-      "Delete"));
+    el("button", {
+      type: "button", class: "btn link",
+      "aria-label": `${done ? "Reopen" : "Complete"} ${task.title}`,
+      onclick: () => toggleComplete(task),
+    }, done ? "Reopen" : "Complete"),
+    el("button", {
+      type: "button", class: "btn link", "aria-label": `Edit ${task.title}`,
+      onclick: () => openTaskDialog(task),
+    }, "Edit"),
+    el("button", {
+      type: "button", class: "btn link", "aria-label": `Delete ${task.title}`,
+      onclick: () => confirmDelete(task),
+    }, "Delete"));
 
   return el("li", { class: `task p-${task.priority} s-${task.status}` },
     stamp,
@@ -418,6 +426,8 @@ async function loadNotifications() {
     const badge = $("#notif-count");
     badge.textContent = unread;
     badge.hidden = unread === 0;
+    // The badge is a red dot to the eye; say the number out loud for screen readers
+    $("#btn-notifications").setAttribute("aria-label", `Notifications, ${unread} unread`);
     $("#notif-list").replaceChildren(...(notifications.length
       ? notifications.map((n) => el("li", { class: n.read ? "" : "unread" },
           n.taskDueDate ? `${n.message} is due ${formatWhen(n.taskDueDate)}` : n.message,

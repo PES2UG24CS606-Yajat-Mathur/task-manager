@@ -4,7 +4,8 @@ from app.security import admin_required
 from tests.helpers import APITestCase
 
 # The only API endpoints that may be called without logging in.
-PUBLIC_ENDPOINTS = {"/api/auth/register", "/api/auth/login"}
+# /api/health (TMA-NF-002) is public on purpose: uptime monitors cannot log in.
+PUBLIC_ENDPOINTS = {"/api/auth/register", "/api/auth/login", "/api/health"}
 
 
 class TestEveryEndpointIsProtected(APITestCase):

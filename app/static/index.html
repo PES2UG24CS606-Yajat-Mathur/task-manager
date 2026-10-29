@@ -9,7 +9,11 @@
   <script src="/static/app.js" defer></script>
 </head>
 <body>
-  <div id="toast" class="toast" hidden></div>
+  <!-- TMA-NF-005: keyboard users can jump past the top bar straight to the content -->
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- Live region: success and error messages are read out by screen readers -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <!-- ===================================================== AUTH VIEW (TMA-F-001..003) -->
   <main id="auth-view" class="auth" hidden>
@@ -75,6 +79,7 @@
           <div class="is-overdue"><dt>Overdue</dt><dd id="count-overdue">0</dd></div>
           <div><dt>Completed</dt><dd id="count-completed">0</dd></div>
         </dl>
+        <!-- the bar is decoration; the sentence under it says the same thing in words -->
         <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
         <p class="hint" id="progress-text">No tasks yet.</p>
 
@@ -140,7 +145,7 @@
           </div>
         </form>
 
-        <p id="task-count" class="hint"></p>
+        <p id="task-count" class="hint" aria-live="polite"></p>
         <ol id="task-list" class="task-list"></ol>
         <div id="empty-state" class="empty" hidden>
           <p>Nothing here yet. Add your first task to start planning.</p>
