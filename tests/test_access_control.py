@@ -19,6 +19,10 @@ class TestAccessControl(APITestCase):
             self.client.post(f"/api/tasks/{tid}/complete", headers=self.intruder),
             self.client.post(f"/api/tasks/{tid}/reopen", headers=self.intruder),
             self.client.get(f"/api/tasks/{tid}/history", headers=self.intruder),
+            # Sprint 2: a task's reminders are protected by the same ownership check
+            self.client.get(f"/api/tasks/{tid}/reminders", headers=self.intruder),
+            self.client.post(f"/api/tasks/{tid}/reminders", json={"minutesBefore": 5},
+                             headers=self.intruder),
         ]
 
     def test_TC_Sec_01_cannot_access_another_users_task(self):

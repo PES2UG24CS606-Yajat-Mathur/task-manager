@@ -55,6 +55,11 @@
     <header class="topbar">
       <span class="brand small">Task Manager</span>
       <nav class="top-actions" aria-label="Account">
+        <!-- TMA-F-040: the badge shows how many notifications are unread -->
+        <button type="button" class="btn ghost" id="btn-notifications" aria-haspopup="dialog">
+          Notifications <span class="badge" id="notif-count" hidden>0</span>
+        </button>
+        <button type="button" class="btn ghost" id="btn-preferences">Preferences</button>
         <button type="button" class="btn ghost" id="btn-logout">Log out</button>
       </nav>
     </header>
@@ -169,9 +174,25 @@
           </select>
         </div>
       </div>
-      <!-- TMA-F-023: shown in the user's local time, sent to the API as UTC -->
-      <label for="t-due">Due date <span class="hint">(optional)</span></label>
-      <input id="t-due" name="dueDate" type="datetime-local">
+      <div class="row">
+        <!-- TMA-F-023: shown in the user's local time, sent to the API as UTC -->
+        <div class="field">
+          <label for="t-due">Due date <span class="hint">(optional)</span></label>
+          <input id="t-due" name="dueDate" type="datetime-local">
+        </div>
+        <!-- TMA-F-024: a reminder relative to the due date -->
+        <div class="field">
+          <label for="t-reminder">Reminder</label>
+          <select id="t-reminder" name="reminder" aria-describedby="t-reminder-note">
+            <option value="">No new reminder</option>
+            <option value="0">At the due time</option>
+            <option value="15">15 minutes before</option>
+            <option value="60">1 hour before</option>
+            <option value="1440">1 day before</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint" id="t-reminder-note"></p>
       <!-- TMA-F-022: type new names or pick existing ones from the suggestions -->
       <label for="t-categories">Categories <span class="hint">(comma separated)</span></label>
       <input id="t-categories" name="categories" list="category-options"
@@ -195,6 +216,54 @@
         <button value="confirm" class="btn danger">Delete task</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- ===================================================== PREFERENCES (TMA-F-041) -->
+  <dialog id="prefs-dialog" aria-labelledby="prefs-title">
+    <form id="prefs-form" class="stack">
+      <h2 id="prefs-title">Preferences</h2>
+      <fieldset>
+        <legend>Reminder notifications</legend>
+        <label class="check"><input type="checkbox" id="p-inapp" name="in_app"> In the app</label>
+        <label class="check"><input type="checkbox" id="p-email" name="email"> By email</label>
+      </fieldset>
+      <div class="row">
+        <div class="field">
+          <label for="p-priority">Default priority for new tasks</label>
+          <select id="p-priority" name="defaultPriority">
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="p-sort">Default sort</label>
+          <select id="p-sort" name="defaultSort">
+            <option value="due_date">Due date</option>
+            <option value="priority">Priority</option>
+            <option value="status">Status</option>
+            <option value="created_at">Date created</option>
+            <option value="title">Title</option>
+          </select>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="submit" class="btn primary">Save preferences</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ===================================================== NOTIFICATIONS (TMA-F-040) -->
+  <dialog id="notif-dialog" aria-labelledby="notif-title">
+    <div class="stack">
+      <h2 id="notif-title">Notifications</h2>
+      <ul id="notif-list" class="notif-list"></ul>
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost" id="btn-read-all">Mark all as read</button>
+        <button type="button" class="btn primary" data-close>Close</button>
+      </div>
+    </div>
   </dialog>
 </body>
 </html>

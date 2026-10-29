@@ -26,6 +26,10 @@ class Config:
     SESSION_LIFETIME_HOURS = int(os.environ.get("SESSION_LIFETIME_HOURS", 8))   # TMA-SR-004
     PASSWORD_HASH_METHOD = os.environ.get("PASSWORD_HASH_METHOD", "scrypt")      # TMA-SR-002
 
+    # --- notifications (TMA-F-024, TMA-F-040) ------------------------------------
+    REMINDER_POLL_SECONDS = int(os.environ.get("REMINDER_POLL_SECONDS", 30))  # scheduler interval
+    EMAIL_NOTIFICATIONS_ENABLED = _env_bool("EMAIL_NOTIFICATIONS_ENABLED", False)
+
     TESTING = False
     DEBUG = False
 

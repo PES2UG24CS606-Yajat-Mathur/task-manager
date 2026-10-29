@@ -9,7 +9,8 @@
      4. tasks            - list, create, edit, complete, delete
      5. dashboard        - active / overdue / completed summary
      6. categories       - suggestions, filter options, sidebar chips
-     7. wiring           - event listeners, started on DOMContentLoaded
+     7. notifications    - unread badge (polled), list, preferences
+     8. wiring           - event listeners, started on DOMContentLoaded
 
    Security notes:
    * User-provided text is ALWAYS inserted with textContent, never innerHTML,
@@ -60,6 +61,7 @@ const state = {
   tasks: [],
   categories: [],        // [{id, name, taskCount}] for suggestions (TMA-F-022)
   editingTaskId: null,   // null = creating a new task
+  preferences: null,     // {notifications, defaultPriority, defaultSort} (TMA-F-041)
 };
 
 /* ------------------------------------------------------- DOM helpers */
@@ -169,6 +171,7 @@ async function handleRegister(event) {
 function endSession() {
   sessionStorage.removeItem(TOKEN_KEY);
   state.user = null;
+  clearInterval(notificationTimer);        // stop polling for notifications
   showAuth();
 }
 
@@ -225,6 +228,7 @@ function renderTask(task) {
     el("span", { class: `status-${task.status}` }, statusLabel),
     el("span", { class: `priority-${task.priority}` }, `${priorityLabel} priority`),
     due && el("span", {}, `Due ${formatWhen(task.dueDate)}`),                 // TMA-F-023
+    task.nextReminder && el("span", {}, `Reminder ${formatWhen(task.nextReminder)}`),  // F-024
     ...task.categories.map((c) => el("span", { class: "chip" }, c)));       // TMA-F-022
 
   const done = task.status === "COMPLETED";
@@ -254,11 +258,14 @@ function openTaskDialog(task = null) {
   $("#task-submit").textContent = task ? "Save changes" : "Create task";
   form.title.value = task?.title ?? "";
   form.description.value = task?.description ?? "";
-  form.priority.value = task?.priority ?? "MEDIUM";
+  // New tasks start with the default priority from Preferences (TMA-F-041)
+  form.priority.value = task?.priority ?? state.preferences?.defaultPriority ?? "MEDIUM";
   // An overdue task is stored as ACTIVE, so the select shows "Active" for it.
   form.status.value = task?.status === "COMPLETED" ? "COMPLETED" : "ACTIVE";
   form.dueDate.value = toLocalInput(task?.dueDate);
   form.categories.value = (task?.categories ?? []).join(", ");
+  $("#t-reminder-note").textContent = task?.nextReminder
+    ? `Next reminder: ${formatWhen(task.nextReminder)}` : "";
   $("#task-dialog").showModal();
   form.title.focus();
 }
@@ -274,6 +281,13 @@ async function handleTaskSubmit(event) {
     form.title.focus();
     return;
   }
+  // "15 minutes before" only makes sense with a due date (the server checks this too)
+  const reminder = form.reminder.value;      // "" = no new reminder, else minutes before
+  if (reminder !== "" && !form.dueDate.value) {
+    $("#task-error").textContent = "Set a due date before choosing a reminder.";
+    form.dueDate.focus();
+    return;
+  }
   const body = {
     title: form.title.value,
     description: form.description.value,
@@ -286,10 +300,18 @@ async function handleTaskSubmit(event) {
 
   try {
     if (state.editingTaskId === null) {
+      // New task: the reminder is created in the same request (one transaction)
+      if (reminder !== "") body.minutesBefore = Number(reminder);
       await api("/api/tasks", { method: "POST", body });
       toast("Task created");
     } else {
+      // Existing task: save the fields, then add the extra reminder (TMA-F-024)
       await api(`/api/tasks/${state.editingTaskId}`, { method: "PATCH", body });
+      if (reminder !== "") {
+        await api(`/api/tasks/${state.editingTaskId}/reminders`, {
+          method: "POST", body: { minutesBefore: Number(reminder) },
+        });
+      }
       toast("Task saved");
     }
     $("#task-dialog").close();
@@ -384,7 +406,83 @@ async function loadCategories() {
   }
 }
 
-/* ------------------------------------------------------ 7. App start */
+/* ------------------------------------------------- 7a. Notifications */
+// The badge is refreshed every 30 s. Asking the server for notifications also makes it
+// deliver any reminder that has just become due (the "lazy trigger" in notifications.py).
+let notificationTimer;
+
+async function loadNotifications() {
+  try {
+    const { notifications, unread } = await api("/api/notifications");
+    const badge = $("#notif-count");
+    badge.textContent = unread;
+    badge.hidden = unread === 0;
+    $("#notif-list").replaceChildren(...(notifications.length
+      ? notifications.map((n) => el("li", { class: n.read ? "" : "unread" },
+          n.taskDueDate ? `${n.message} is due ${formatWhen(n.taskDueDate)}` : n.message,
+          el("time", { datetime: n.createdAt }, `Sent ${formatWhen(n.createdAt)}`)))
+      : [el("li", { class: "hint" }, "No notifications. Reminders you set will appear here.")]));
+  } catch {
+    /* polling failures stay silent; the next poll tries again */
+  }
+}
+
+async function openNotifications() {
+  await loadNotifications();
+  $("#notif-dialog").showModal();
+}
+
+async function markAllRead() {
+  try {
+    await api("/api/notifications/read-all", { method: "POST" });
+    await loadNotifications();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+/* --------------------------------------------------- 7b. Preferences */
+async function loadPreferences() {
+  const { preferences } = await api("/api/preferences");
+  state.preferences = preferences;
+  return preferences;
+}
+
+async function openPreferences() {
+  try {
+    const p = await loadPreferences();
+    $("#p-inapp").checked = p.notifications.in_app;
+    $("#p-email").checked = p.notifications.email;
+    $("#p-priority").value = p.defaultPriority;
+    $("#p-sort").value = p.defaultSort;
+    $("#prefs-dialog").showModal();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function handlePrefsSubmit(event) {
+  event.preventDefault();
+  try {
+    const { preferences } = await api("/api/preferences", {
+      method: "PUT",
+      body: {
+        notifications: { in_app: $("#p-inapp").checked, email: $("#p-email").checked },
+        defaultPriority: $("#p-priority").value,
+        defaultSort: $("#p-sort").value,
+      },
+    });
+    state.preferences = preferences;
+    $("#f-sort").value = preferences.defaultSort;   // apply the new default sort now
+    $("#prefs-dialog").close();
+    toast("Preferences saved");
+    await loadTasks();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+/* ------------------------------------------------------ 8. App start */
 /** Reload everything that a task change can affect. */
 async function refreshAll() {
   await Promise.all([loadTasks(), loadSummary(), loadCategories()]);
@@ -395,7 +493,15 @@ async function startApp(user) {
   $("#auth-view").hidden = true;
   $("#app-view").hidden = false;
   $("#user-name").textContent = user.name;
+
+  try {
+    const prefs = await loadPreferences();
+    $("#f-sort").value = prefs.defaultSort;          // the list opens in my default order
+  } catch { /* keep the built-in defaults */ }
   await refreshAll();
+  await loadNotifications();
+  clearInterval(notificationTimer);
+  notificationTimer = setInterval(loadNotifications, 30000);
 }
 
 /** Wait until the user stops typing for `ms` milliseconds before calling fn. */
@@ -413,6 +519,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // App
   $("#btn-logout").addEventListener("click", handleLogout);
+  $("#btn-notifications").addEventListener("click", openNotifications);
+  $("#btn-read-all").addEventListener("click", markAllRead);
+  $("#btn-preferences").addEventListener("click", openPreferences);
+  $("#prefs-form").addEventListener("submit", handlePrefsSubmit);
   $("#btn-new-task").addEventListener("click", () => openTaskDialog());
   $("#btn-empty-new").addEventListener("click", () => openTaskDialog());
   $("#task-form").addEventListener("submit", handleTaskSubmit);
