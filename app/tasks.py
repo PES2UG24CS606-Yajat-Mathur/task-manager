@@ -3,7 +3,7 @@ Task Module (SAD 3.4) - create, view, edit, delete, complete/reopen + history.
 
 Endpoints (SAD 4.3 API design)
 ------------------------------
-GET    /api/tasks                 list my tasks (newest first)        TMA-F-010
+GET    /api/tasks                 list / search / filter / sort       TMA-F-010, F-030..032
 POST   /api/tasks                 create a task                       TMA-F-010, F-020..023
 GET    /api/tasks/<id>            one task                            TMA-F-014
 PATCH  /api/tasks/<id>            edit fields                         TMA-F-011, F-020..023
@@ -28,12 +28,13 @@ Create-task flow follows SAD Figure 4:
 
 import json
 
-from flask import Blueprint, g
+from flask import Blueprint, g, request
 
 from .access import get_owned_task
 from .db import query_all, query_one, transaction
 from .errors import ValidationError
 from .scheduling import categories_for_tasks, ensure_categories, set_task_categories
+from .search import build_task_query
 from .security import login_required
 from .status import effective_status_sql
 from .utils import now_db, ok, to_api
@@ -91,10 +92,10 @@ def add_history(db, task_id: int, change_type: str, details: dict):
 @bp.get("")
 @login_required
 def list_tasks():
-    # The WHERE user_id filter is what keeps other users' tasks out (TMA-F-014).
-    rows = query_all(f"{TASK_SELECT} WHERE t.user_id = :user_id "
-                     f"ORDER BY t.created_at DESC, t.id DESC",
-                     {"user_id": g.user["id"], "now": now_db()})
+    # The Search Module builds the query from ?q=&status=&priority=&category=&sort=&order=
+    # and ALWAYS filters on user_id, which keeps other users' tasks out (TMA-F-014).
+    sql, params = build_task_query(g.user["id"], request.args, now_db())
+    rows = query_all(sql, params)
     return ok({"tasks": serialize_tasks(rows), "count": len(rows)})
 
 
