@@ -14,7 +14,7 @@ Architecture (SAD 3.5): a layered monolith with modular components.
 import logging
 import os
 
-from flask import Flask, send_from_directory
+from flask import Flask, request, send_from_directory
 from flask.logging import default_handler
 
 from .config import CONFIGS
@@ -42,6 +42,7 @@ def create_app(config_name=None, overrides=None) -> Flask:
         init_db()          # CREATE TABLE IF NOT EXISTS ... -> safe on every start
 
     _register_modules(app)
+    _register_security_hooks(app)
     _register_core_routes(app)
     return app
 
@@ -52,6 +53,30 @@ def _register_modules(app: Flask):
     for module in (auth, tasks, scheduling, dashboard, notifications):
         app.register_blueprint(module.bp)
     app.cli.add_command(notifications.send_reminders_command)   # flask --app run send-reminders
+
+
+def _register_security_hooks(app: Flask):
+    @app.after_request
+    def security_headers(response):
+        """
+        TMA-NF-003: defence-in-depth HTTP headers on every response.
+          X-Content-Type-Options  browser must not guess file types (no "sniffing")
+          X-Frame-Options         page cannot be shown inside another site's frame
+          Referrer-Policy         task URLs are not leaked to other sites
+          Content-Security-Policy only our own scripts and styles may run, so an
+                                  injected <script> would be blocked (XSS)
+          Cache-Control no-store  task data from /api/ is never cached on disk
+        """
+        h = response.headers
+        h.setdefault("X-Content-Type-Options", "nosniff")
+        h.setdefault("X-Frame-Options", "DENY")
+        h.setdefault("Referrer-Policy", "no-referrer")
+        h.setdefault("Content-Security-Policy",
+                     "default-src 'self'; img-src 'self' data:; style-src 'self'; "
+                     "script-src 'self'; frame-ancestors 'none'; base-uri 'self'")
+        if request.path.startswith("/api/"):
+            h["Cache-Control"] = "no-store"
+        return response
 
 
 def _register_core_routes(app: Flask):
