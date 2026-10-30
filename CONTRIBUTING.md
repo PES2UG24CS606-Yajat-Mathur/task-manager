@@ -48,3 +48,16 @@ The owner cannot approve their own PR on GitHub: another member approves it, and
 
 `<Requirement IDs>: <what changed>`, for example
 `TMA-F-012, TMA-F-013: delete with confirmation, complete and reopen tasks`.
+
+## Development freeze (end of Sprint 2)
+
+When the last Sprint 2 PR is merged, `main` is tagged `v1.0` and development stops:
+
+```bash
+git checkout main && git pull
+git tag -a v1.0 -m "Task Manager v1.0 - end of Sprint 2, development frozen"
+git push origin v1.0
+```
+
+The tag marks the exact code shown at the final demo. A fix after the freeze would need
+its own PR and a new tag (`v1.0.1`).
