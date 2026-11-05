@@ -1,3 +1,5 @@
 [flake8]
 max-line-length = 110
 exclude = .git,__pycache__,.venv,venv,instance,reports
+# Browser checks and the test case text in system_tests/ read best with one long expression per line.
+per-file-ignores = system_tests/run_system_validation.py:E501,system_tests/test_case_catalog.py:E501,system_tests/generate_reports.py:E501

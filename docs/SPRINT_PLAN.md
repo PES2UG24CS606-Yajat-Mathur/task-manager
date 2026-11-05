@@ -51,6 +51,21 @@ Story points use the team's scale 1 / 3 / 5 / 8. Source: SRS v1.0.
 
 **56 points, 18 items.**
 
+## Sprint 3 (optional, Part 3)
+
+2-6 Nov 2026. Fix the defects found by Part 3 testing, and release `v1.0.1`. Details in
+[`SPRINT3_REVIEW.md`](SPRINT3_REVIEW.md).
+
+| Defect | Summary | Points | Assignee | Test case |
+|---|---|---|---|---|
+| DEF-01 | Very large integer in a URL or query gave HTTP 500 | 1 | Vismay Chandra Dev | TC-Val-01 |
+| DEF-02 | Date at the edge of the supported range gave HTTP 500 | 1 | Tharunyah Sudhakar | TC-Val-01 |
+| DEF-03 | minutesBefore of 1e999 gave HTTP 500 | 1 | Vishnu Narayanan Ajay | TC-Val-01 |
+| DEF-04 | Lone Unicode surrogate in text gave HTTP 500 | 1 | Yajat Mathur | TC-Val-01 |
+| DEF-05 | Very deeply nested JSON gave HTTP 500 | 1 | Vismay Chandra Dev | TC-Val-01 |
+
+**5 points, 5 items.** Not counted in the table below until assigned.
+
 ## Points per member
 
 | Member | Sprint 1 | Sprint 2 | Total |

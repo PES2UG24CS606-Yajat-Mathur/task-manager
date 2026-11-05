@@ -25,6 +25,7 @@ of our own strings, so SQL injection is not possible (TMA-NF-003).
 
 from .errors import ValidationError
 from .status import ALL_STATUSES, effective_status_sql
+from .utils import MAX_DB_INT
 from .validators import PRIORITIES, clean_sort
 
 # Rank expressions so that ascending order means "most important first".
@@ -111,6 +112,8 @@ def build_task_query(user_id: int, args, now: str, default_sort: str = "due_date
         offset = max(int(args.get("offset", 0)), 0)
     except (TypeError, ValueError):
         raise ValidationError("limit and offset must be integers") from None
+    if offset > MAX_DB_INT:         # DEF-01: too large for SQLite (limit is already capped above)
+        raise ValidationError("offset is too large", {"field": "offset"})
     params.update(limit=limit, offset=offset)
 
     # The inner SELECT works out effective_status once, so WHERE and ORDER BY can use it.

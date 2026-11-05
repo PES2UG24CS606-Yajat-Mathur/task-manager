@@ -1,7 +1,8 @@
 # Task Manager Application
 
 Software Engineering mini-project, Section J, Batch 12, PES University.
-**Version 1.0** (development frozen at tag `v1.0`, end of Sprint 2, 30 Oct 2026).
+**Version 1.0.1** (`v1.0` froze development at the end of Sprint 2 on 30 Oct 2026; Sprint 3 added
+the defect fixes from Part 3 testing, 2-6 Nov 2026).
 
 | SRN | Name | Role | GitHub |
 |---|---|---|---|
@@ -12,7 +13,7 @@ Software Engineering mini-project, Section J, Batch 12, PES University.
 
 A web application to create, organise, prioritise, schedule and complete personal tasks,
 built from our SRS v1.0, SAD v1.0 and Software Test Plan v1.0. All 31 SRS requirements
-are implemented and covered by 121 automated tests.
+are implemented and covered by 155 automated tests. Test reports: [`docs/testing/`](docs/testing/README.md).
 
 ## Features
 
@@ -59,10 +60,10 @@ Production setup, HTTPS, environment variables and backups:
 ## Tests and checks
 
 ```bat
-pytest                     :: 121 tests; names carry the Test Plan IDs (TC-Auth-01, ...)
+pytest                     :: 155 tests; names carry the Test Plan IDs (TC-Auth-01, ...)
 pytest -k TC_Sec           :: only the security test cases
 pytest -s tests/test_performance.py    :: prints the measured dashboard p95
-pytest --cov=app           :: with line coverage
+pytest --cov=app --cov-branch   :: with line and branch coverage
 flake8 .                   :: style check
 ```
 

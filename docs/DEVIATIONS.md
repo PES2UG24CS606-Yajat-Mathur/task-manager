@@ -1,7 +1,7 @@
 # Deviations from the submitted SRS, SAD and Test Plan
 
 Mini-Project Part-2 asks for every deviation from the submitted documents to be recorded
-and explained in the final demo. D1 to D7 were found in Sprint 1, D8 to D14 in Sprint 2.
+and explained in the final demo. D1 to D7 were found in Sprint 1, D8 to D14 in Sprint 2, D15 to D16 in Part 3 testing, D17 to D18 in Sprint 3.
 
 | # | Document / section | What the document says | What we implemented | Why |
 |---|---|---|---|---|
@@ -19,3 +19,7 @@ and explained in the final demo. D1 to D7 were found in Sprint 1, D8 to D14 in S
 | D12 | SRS TMA-SR-001 (HTTPS / TLS) | HTTPS between clients and backend | The app enforces HTTPS when `FORCE_HTTPS` is on (default in production): HTTP is redirected, HSTS is sent. TLS itself is provided by a reverse proxy in production and by a self-signed certificate locally (`python run.py --https`) | Certificates belong to the hosting environment, not the code. The demo runs on a laptop, where only a self-signed certificate is possible. |
 | D13 | SRS TMA-NF-002 (99.5% monthly availability) | Measured availability | `/api/health` for uptime monitoring, documented production setup with automatic restarts and backups (`docs/DEPLOYMENT.md`); the monthly figure itself is not measured | Availability can only be measured on a deployed system over a month; the project runs locally. |
 | D14 | SRS 2.2 (sync across sessions and devices) | "may support" | Data lives on the server, so any device that logs in sees the same tasks; no offline sync | SAD 4.6 left sync scope open; offline sync is out of scope for two sprints. |
+| D15 | Test Plan section 6 (tools) | Selenium or an equivalent for UI tests | System validation uses Playwright with Chromium (`system_tests/run_system_validation.py`) | The Test Plan allows an equivalent tool. Playwright is scripted in Python like the rest of the tests. |
+| D16 | Test Plan sections 3 and 5.1 | Fuzz checks listed without a test case ID | New test case TC-Val-01 | The checks needed an ID so they could be traced and reported. It found defects DEF-01 to DEF-04 in v1.0, fixed in Sprint 3. |
+| D17 | Sprint 2 review (development frozen at `v1.0`, no later change planned) | No Sprint 3 | Optional Sprint 3, released as `v1.0.1` | Part 3 allows a Sprint 3 for spill-overs. Testing found five low-severity defects, and fixing them closes TC-Val-01. |
+| D18 | SRS TMA-F-023 (valid due date) | No date range given | Due dates and reminder times before 1900 get 400 | Very early years could not be stored reliably (DEF-02). No real task needs them. |
