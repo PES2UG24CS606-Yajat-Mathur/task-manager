@@ -64,15 +64,15 @@ Story points use the team's scale 1 / 3 / 5 / 8. Source: SRS v1.0.
 | DEF-04 | Lone Unicode surrogate in text gave HTTP 500 | 1 | Yajat Mathur | TC-Val-01 |
 | DEF-05 | Very deeply nested JSON gave HTTP 500 | 1 | Vismay Chandra Dev | TC-Val-01 |
 
-**5 points, 5 items.** Not counted in the table below until assigned.
+**5 points, 5 items.**
 
 ## Points per member
 
-| Member | Sprint 1 | Sprint 2 | Total |
-|---|---|---|---|
-| Vishnu Narayanan Ajay (@vishnu201917-n) | 12 | 12 | 24 |
-| Tharunyah Sudhakar (@tharunyah) | 5 | 16 | 21 |
-| Vismay Chandra Dev (@VismayCD) | 9 | 13 | 22 |
-| Yajat Mathur (@PES2UG24CS606-Yajat-Mathur) | 5 | 15 | 20 |
+| Member | Sprint 1 | Sprint 2 | Sprint 3 | Total |
+|---|---|---|---|---|
+| Vishnu Narayanan Ajay (@vishnu201917-n) | 12 | 12 | 1 | 25 |
+| Tharunyah Sudhakar (@tharunyah) | 5 | 16 | 1 | 22 |
+| Vismay Chandra Dev (@VismayCD) | 9 | 13 | 2 | 24 |
+| Yajat Mathur (@PES2UG24CS606-Yajat-Mathur) | 5 | 15 | 1 | 21 |
 
-**Total: 31 requirements, 87 story points.**
+**Total: 31 requirements and 5 defects, 92 story points.**

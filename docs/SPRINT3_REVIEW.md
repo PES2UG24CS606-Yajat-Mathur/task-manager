@@ -5,16 +5,24 @@ parallel activity in Mini-Project Part 3. No new features were added.
 
 ## Delivered
 
-| Defect | What went wrong | Fix | Code | Points |
-|---|---|---|---|---|
-| DEF-01 | Very large integer in a URL or query gave HTTP 500 | One bounded `<int>` URL converter for the whole app gives the normal 404; a too-large offset gets 400 | `app/__init__.py`, `app/search.py`, `app/utils.py` | 1 |
-| DEF-02 | Date at the edge of the supported range gave HTTP 500 | Overflow is caught, and dates before 1900 get 400 | `app/validators.py` | 1 |
-| DEF-03 | `minutesBefore` of `1e999` gave HTTP 500 | Overflow is caught, giving 400 | `app/scheduling.py` | 1 |
-| DEF-04 | Lone Unicode surrogate in text gave HTTP 500 | `get_json_body` refuses such text with 400 | `app/validators.py` | 1 |
-| DEF-05 | Very deeply nested JSON gave HTTP 500 (found during this sprint) | `get_json_body` catches the parser's recursion error, giving 400 | `app/validators.py` | 1 |
+| Defect | Owner | What went wrong | Fix | Code | Points |
+|---|---|---|---|---|---|
+| DEF-01 | Vismay Chandra Dev | Very large integer in a URL or query gave HTTP 500 | One bounded `<int>` URL converter for the whole app gives the normal 404; a too-large offset gets 400 | `app/__init__.py`, `app/search.py`, `app/utils.py` | 1 |
+| DEF-02 | Tharunyah Sudhakar | Date at the edge of the supported range gave HTTP 500 | Overflow is caught, and dates before 1900 get 400 | `app/validators.py` | 1 |
+| DEF-03 | Vishnu Narayanan Ajay | `minutesBefore` of `1e999` gave HTTP 500 | Overflow is caught, giving 400 | `app/scheduling.py` | 1 |
+| DEF-04 | Yajat Mathur | Lone Unicode surrogate in text gave HTTP 500 | `get_json_body` refuses such text with 400 | `app/validators.py` | 1 |
+| DEF-05 | Vismay Chandra Dev | Very deeply nested JSON gave HTTP 500 (found during this sprint) | `get_json_body` catches the parser's recursion error, giving 400 | `app/validators.py` | 1 |
 
-**Velocity: 5 story points, 5 of 5 defects fixed.** Fill in the owner of each item when the backlog
-issues are created.
+**Velocity: 5 story points, 5 of 5 defects fixed.**
+
+| Member | Sprint 3 points |
+|---|---|
+| Vismay Chandra Dev | 2 |
+| Tharunyah Sudhakar | 1 |
+| Vishnu Narayanan Ajay | 1 |
+| Yajat Mathur | 1 |
+
+**Project total: 92 story points (87 in Sprints 1 and 2, 5 in Sprint 3).**
 
 ## Testing done alongside
 
