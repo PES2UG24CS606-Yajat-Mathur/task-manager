@@ -1,0 +1,226 @@
+{
+ "meta": {
+  "tool": "system_tests/stdlib_coverage.py (Python sys.monitoring)",
+  "python": "3.13.18",
+  "branch_coverage": true
+ },
+ "files": {
+  "app/__init__.py": {
+   "summary": {
+    "num_statements": 59,
+    "missing_lines": 0,
+    "covered_lines": 59,
+    "num_branches": 8,
+    "covered_branches": 8,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/access.py": {
+   "summary": {
+    "num_statements": 12,
+    "missing_lines": 0,
+    "covered_lines": 12,
+    "num_branches": 4,
+    "covered_branches": 4,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/admin.py": {
+   "summary": {
+    "num_statements": 65,
+    "missing_lines": 0,
+    "covered_lines": 65,
+    "num_branches": 20,
+    "covered_branches": 20,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/auth.py": {
+   "summary": {
+    "num_statements": 68,
+    "missing_lines": 0,
+    "covered_lines": 68,
+    "num_branches": 12,
+    "covered_branches": 12,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/config.py": {
+   "summary": {
+    "num_statements": 28,
+    "missing_lines": 0,
+    "covered_lines": 28,
+    "num_branches": 0,
+    "covered_branches": 0,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/dashboard.py": {
+   "summary": {
+    "num_statements": 16,
+    "missing_lines": 0,
+    "covered_lines": 16,
+    "num_branches": 0,
+    "covered_branches": 0,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/db.py": {
+   "summary": {
+    "num_statements": 42,
+    "missing_lines": 0,
+    "covered_lines": 42,
+    "num_branches": 2,
+    "covered_branches": 2,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/errors.py": {
+   "summary": {
+    "num_statements": 37,
+    "missing_lines": 0,
+    "covered_lines": 37,
+    "num_branches": 4,
+    "covered_branches": 4,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/notifications.py": {
+   "summary": {
+    "num_statements": 104,
+    "missing_lines": 0,
+    "covered_lines": 104,
+    "num_branches": 22,
+    "covered_branches": 22,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/scheduling.py": {
+   "summary": {
+    "num_statements": 96,
+    "missing_lines": 0,
+    "covered_lines": 96,
+    "num_branches": 24,
+    "covered_branches": 24,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/search.py": {
+   "summary": {
+    "num_statements": 48,
+    "missing_lines": 0,
+    "covered_lines": 48,
+    "num_branches": 12,
+    "covered_branches": 12,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/security.py": {
+   "summary": {
+    "num_statements": 84,
+    "missing_lines": 0,
+    "covered_lines": 84,
+    "num_branches": 16,
+    "covered_branches": 16,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/status.py": {
+   "summary": {
+    "num_statements": 4,
+    "missing_lines": 0,
+    "covered_lines": 4,
+    "num_branches": 0,
+    "covered_branches": 0,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/tasks.py": {
+   "summary": {
+    "num_statements": 108,
+    "missing_lines": 0,
+    "covered_lines": 108,
+    "num_branches": 24,
+    "covered_branches": 24,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/utils.py": {
+   "summary": {
+    "num_statements": 27,
+    "missing_lines": 0,
+    "covered_lines": 27,
+    "num_branches": 6,
+    "covered_branches": 6,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  },
+  "app/validators.py": {
+   "summary": {
+    "num_statements": 90,
+    "missing_lines": 0,
+    "covered_lines": 90,
+    "num_branches": 42,
+    "covered_branches": 42,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": []
+  }
+ },
+ "totals": {
+  "num_statements": 888,
+  "missing_lines": 0,
+  "covered_lines": 888,
+  "num_branches": 196,
+  "covered_branches": 196,
+  "missing_branches": 0,
+  "num_partial_branches": 0
+ }
+}

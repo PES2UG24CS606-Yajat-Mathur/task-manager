@@ -1,0 +1,8 @@
+    if recent_failed_logins(email, cfg["FAILED_LOGIN_WINDOW_MIN"]) >= cfg["MAX_FAILED_LOGINS"]:
+  File "/tmp/tmp.9dnhLBeAsz/app/security.py", line 192, in recent_failed_logins
+FAILED tests/test_input_robustness.py::TestEveryRoute::test_TC_Val_01b_huge_id_in_any_url_is_not_found
+FAILED tests/test_input_robustness.py::TestEveryRoute::test_TC_Val_01d_surrogate_in_any_json_body_is_refused
+FAILED tests/test_input_robustness.py::TestEveryRoute::test_TC_Val_01e_deeply_nested_json_is_refused
+FAILED tests/test_input_robustness.py::TestSpecificBoundaries::test_TC_Val_01f_huge_paging_values_are_refused_or_clamped
+FAILED tests/test_input_robustness.py::TestSeededFuzz::test_TC_Val_01m_seeded_fuzz_of_every_route_gives_no_server_error
+15 failed, 7 passed, 4 subtests passed in 0.71s

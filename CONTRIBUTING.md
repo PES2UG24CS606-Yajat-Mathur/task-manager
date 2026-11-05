@@ -61,3 +61,6 @@ git push origin v1.0
 
 The tag marks the exact code shown at the final demo. A fix after the freeze would need
 its own PR and a new tag (`v1.0.1`).
+
+Sprint 3 reopened development for the defect fixes from Part 3 testing, released as `v1.0.1`
+with the same commands.

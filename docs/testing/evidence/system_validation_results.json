@@ -1,0 +1,677 @@
+{
+ "meta": {
+  "python": "3.13.18",
+  "generatedAt": "2026-11-05T03:10:02Z",
+  "summary": {
+   "PASS": 54,
+   "PARTIAL": 2,
+   "FAIL": 0
+  },
+  "total": 56,
+  "browser": "Chromium (Playwright)",
+  "os": "linux"
+ },
+ "cases": [
+  {
+   "id": "SV-01",
+   "tc": "TC-Auth-01",
+   "req": "TMA-F-001",
+   "title": "Register a new account in the browser",
+   "expected": "A unique account is created and the user lands on their task page",
+   "actual": "Task page opened with 'Hello, Maya Rao'; exactly one row in users.",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/01-register.png"
+   ],
+   "seconds": 0.67
+  },
+  {
+   "id": "SV-02",
+   "tc": "TC-Auth-01",
+   "req": "TMA-F-001",
+   "title": "Duplicate and invalid registration is refused",
+   "expected": "Clear error message; no second account is created",
+   "actual": "Duplicate 409 ('An account with this email already exists'), weak password 400, bad email 400.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.08
+  },
+  {
+   "id": "SV-03",
+   "tc": "TC-Auth-04",
+   "req": "TMA-F-004 / TMA-SR-004",
+   "title": "Log out in the browser, then protected pages are closed",
+   "expected": "Session ends; the old token no longer works; the login form is shown",
+   "actual": "Login form shown. Old token now gets 401 on /api/tasks.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.09
+  },
+  {
+   "id": "SV-04",
+   "tc": "TC-Auth-03",
+   "req": "TMA-F-003",
+   "title": "Wrong password in the browser",
+   "expected": "Login rejected with a clear message and no session created",
+   "actual": "Message 'Invalid email or password'; no token in the browser.",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/04-invalid-login.png"
+   ],
+   "seconds": 0.3
+  },
+  {
+   "id": "SV-05",
+   "tc": "TC-Auth-02",
+   "req": "TMA-F-002",
+   "title": "Log in with valid credentials",
+   "expected": "User is authenticated and reaches the task dashboard",
+   "actual": "Task dashboard displayed.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.25
+  },
+  {
+   "id": "SV-06",
+   "tc": "TC-Task-01",
+   "req": "TMA-F-010",
+   "title": "Create a task from the form",
+   "expected": "Task is saved and appears in the list; an empty title is refused",
+   "actual": "Empty title showed 'Title is required.'; valid task appeared in the list.",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/06-task-created.png"
+   ],
+   "seconds": 0.41
+  },
+  {
+   "id": "SV-07",
+   "tc": "TC-Org-01",
+   "req": "TMA-F-020",
+   "title": "Priority is saved and displayed",
+   "expected": "Selected priority is shown with the task",
+   "actual": "'High priority' shown on the task.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.01
+  },
+  {
+   "id": "SV-08",
+   "tc": "TC-Org-04",
+   "req": "TMA-F-023",
+   "title": "Due date entered in local time is stored as UTC",
+   "expected": "Stored and displayed due date are correct",
+   "actual": "Entered in IST; database holds UTC 2026-11-07T03:09:00, which converts back to the entered time. Shown as: Due Nov 7, 2026, 8:39 AM",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.01
+  },
+  {
+   "id": "SV-09",
+   "tc": "TC-Org-03",
+   "req": "TMA-F-022",
+   "title": "Categories are created and reused",
+   "expected": "Task is linked to the selected categories; existing names are reused",
+   "actual": "'college' reused the existing 'College' category; one row in categories.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.19
+  },
+  {
+   "id": "SV-10",
+   "tc": "TC-Task-02",
+   "req": "TMA-F-011",
+   "title": "Edit a task",
+   "expected": "Updated information is saved and displayed correctly",
+   "actual": "New title and description shown; history row written.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.13
+  },
+  {
+   "id": "SV-11",
+   "tc": "TC-Org-05",
+   "req": "TMA-F-024",
+   "title": "Configure a reminder from the form",
+   "expected": "Configured reminder is stored and shown on the task",
+   "actual": "Task shows its 'Reminder ...' line; one pending row in reminders.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-12",
+   "tc": "TC-Org-02",
+   "req": "TMA-F-021",
+   "title": "Status change and automatic Overdue",
+   "expected": "Status is saved and reflected in views; a past due date reads as Overdue",
+   "actual": "Past-due task showed Overdue; set to Completed through the form; reopened back to Overdue.",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/12-overdue.png"
+   ],
+   "seconds": 0.45
+  },
+  {
+   "id": "SV-13",
+   "tc": "TC-Task-04",
+   "req": "TMA-F-013",
+   "title": "Complete and reopen with the buttons",
+   "expected": "Status changes correctly between active and completed",
+   "actual": "Active -> Completed -> Active, shown in the list each time.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.17
+  },
+  {
+   "id": "SV-14",
+   "tc": "TC-Progress-01",
+   "req": "TMA-F-033",
+   "title": "Dashboard counts match the task data",
+   "expected": "Counts equal what the database holds",
+   "actual": "Active / Overdue / Completed on screen [2, 1, 1] equal the database [2, 1, 1].",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/14-dashboard.png"
+   ],
+   "seconds": 0.7
+  },
+  {
+   "id": "SV-15",
+   "tc": "TC-Search-01",
+   "req": "TMA-F-030",
+   "title": "Search by keyword",
+   "expected": "Matching tasks are returned; others are excluded",
+   "actual": "Description keyword found one task; a non-match gave '0 matching tasks'.",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/15-search.png"
+   ],
+   "seconds": 0.93
+  },
+  {
+   "id": "SV-16",
+   "tc": "TC-Search-02",
+   "req": "TMA-F-031",
+   "title": "Filter by status, priority and category",
+   "expected": "Only matching tasks are displayed",
+   "actual": "Each filter showed only the matching task; clearing restored all four.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.16
+  },
+  {
+   "id": "SV-17",
+   "tc": "TC-Search-03",
+   "req": "TMA-F-032",
+   "title": "Sort by due date, priority and status",
+   "expected": "The selected order is applied",
+   "actual": "Priority: ['Submit SE report', 'Old assignment', 'Lab record v2', 'Done already']. Due date: ['Old assignment', 'Submit SE report', 'Lab record v2', 'Done already']. Status: Overdue first, Completed last.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.14
+  },
+  {
+   "id": "SV-18",
+   "tc": "TC-Task-03",
+   "req": "TMA-F-012",
+   "title": "Delete needs confirmation",
+   "expected": "Cancel keeps the task; confirming removes it from every view",
+   "actual": "'Keep task' kept it. 'Delete task' removed it from the list and the database.",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/18-delete-confirm.png"
+   ],
+   "seconds": 0.29
+  },
+  {
+   "id": "SV-19",
+   "tc": "TC-Notify-01",
+   "req": "TMA-F-040 / TMA-F-024",
+   "title": "A due reminder becomes a notification without any client request",
+   "expected": "The background scheduler creates exactly one notification; the badge shows it",
+   "actual": "Scheduler delivered one notification, once. Badge showed 1, list named the task, 'Mark all as read' cleared it.",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/19-notification.png"
+   ],
+   "seconds": 6.94
+  },
+  {
+   "id": "SV-20",
+   "tc": "TC-Notify-02",
+   "req": "TMA-F-041",
+   "title": "Preferences are saved and applied to later work",
+   "expected": "Default priority and sort apply; switching in-app off stops later notifications",
+   "actual": "Sort and new-task priority followed the saved defaults; reminder fired with no notification while in-app was off.",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/20-preferences.png"
+   ],
+   "seconds": 3.39
+  },
+  {
+   "id": "SV-21",
+   "tc": "TC-Sec-01",
+   "req": "TMA-F-014 / TMA-SR-003",
+   "title": "Another user cannot see or change my task",
+   "expected": "Every cross-user request is refused and recorded; the task is untouched",
+   "actual": "All 7 request types returned 403; task row unchanged; 7 ACCESS_DENIED events recorded.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.29
+  },
+  {
+   "id": "SV-22",
+   "tc": "TC-Sec-01",
+   "req": "TMA-F-014",
+   "title": "A task title containing HTML is shown as plain text (stored XSS)",
+   "expected": "The markup is displayed as text and never runs",
+   "actual": "Payload displayed literally; no script ran.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.59
+  },
+  {
+   "id": "SV-23",
+   "tc": "TC-Admin-01",
+   "req": "TMA-F-042",
+   "title": "Administrator manages users; a normal user cannot",
+   "expected": "Only authorised administrators reach admin functions; deactivation logs the user out",
+   "actual": "Normal user: no button and 403. Anonymous: 401. Admin deactivated a user: session dead, login 403, action in the log.",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/23-admin.png"
+   ],
+   "seconds": 0.99
+  },
+  {
+   "id": "SV-24",
+   "tc": "TC-UX-01",
+   "req": "TMA-NF-005",
+   "title": "No JavaScript errors during the whole browser session",
+   "expected": "The browser reports no uncaught errors",
+   "actual": "No uncaught JavaScript errors across all flows above.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-25",
+   "tc": "TC-UX-01",
+   "req": "TMA-NF-005",
+   "title": "Responsive layout at phone, tablet and desktop widths",
+   "expected": "No sideways page scroll at 360, 390, 768 and 1280 px; controls stay inside the screen",
+   "actual": "Overflow px / off-screen controls per width: 360: 0/0, 390: 0/0, 768: 0/0, 1280: 0/0",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/25-width-360.png",
+    "screenshots/25-width-390.png",
+    "screenshots/25-width-768.png",
+    "screenshots/25-width-1280.png"
+   ],
+   "seconds": 1.64
+  },
+  {
+   "id": "SV-26",
+   "tc": "TC-UX-01",
+   "req": "TMA-NF-005",
+   "title": "Keyboard-only use of the main flow",
+   "expected": "Tab reaches the controls, a visible focus style appears, Esc closes a dialog, a task can be created without a mouse",
+   "actual": "Login, new task, Esc and save all worked with the keyboard. First Tab reached the skip link (focus outline: solid 3px).",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.63
+  },
+  {
+   "id": "SV-27",
+   "tc": "TC-UX-01",
+   "req": "TMA-NF-005",
+   "title": "Accessible names and dark mode",
+   "expected": "Every visible control has an accessible name; the page follows the system dark setting",
+   "actual": "Body background rgb(20, 27, 31). No unnamed controls. Row buttons have task-specific names, e.g. 'Delete Buy groceries'.",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/27-dark-mode.png"
+   ],
+   "seconds": 0.51
+  },
+  {
+   "id": "SV-28",
+   "tc": "TC-UX-01",
+   "req": "TMA-NF-005",
+   "title": "A failed request shows a clear message (temporary network failure)",
+   "expected": "The user sees an understandable error and no data is lost",
+   "actual": "Offline: 'Can't reach the server...' and the form stayed open. Online again: the same form saved exactly one task.",
+   "status": "PASS",
+   "evidence": [
+    "screenshots/28-offline.png"
+   ],
+   "seconds": 0.72
+  },
+  {
+   "id": "SV-29",
+   "tc": "TC-Sec-02",
+   "req": "TMA-SR-002 / TMA-NF-003",
+   "title": "Inspect stored credentials in the real database file",
+   "expected": "Only secure salted hashes; no plaintext passwords or session tokens anywhere in the file",
+   "actual": "Hashes start with scrypt:32768:8:1; two users with one password have different hashes; password and raw token absent from the raw DB and WAL bytes; API never returns the hash.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.38
+  },
+  {
+   "id": "SV-30",
+   "tc": "TC-Sec-04",
+   "req": "TMA-SR-004",
+   "title": "Forged, logged-out and expired tokens are refused",
+   "expected": "All get 401; protected data is not returned",
+   "actual": "Forged 401, no token 401, session expired in the database 401, logged out 401.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.29
+  },
+  {
+   "id": "SV-31",
+   "tc": "TC-Sec-05",
+   "req": "TMA-SR-005",
+   "title": "Security events are recorded without secrets",
+   "expected": "Failed login, success, logout, denied access and admin actions are logged; no passwords or tokens",
+   "actual": "43 events of 6 types recorded, with IP addresses; the attempted passwords do not appear; administrators can read them through the API.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.21
+  },
+  {
+   "id": "SV-32",
+   "tc": "TC-Auth-03",
+   "req": "TMA-F-003 / SAD 3.9",
+   "title": "Repeated failed logins are locked out",
+   "expected": "After 5 failures the account refuses login, even with the right password",
+   "actual": "Codes [401, 401, 401, 401, 401, 429]; correct password then 429; the already-open session keeps working.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.71
+  },
+  {
+   "id": "SV-33",
+   "tc": "TC-Sec-02",
+   "req": "TMA-NF-003",
+   "title": "Security headers on real responses; no-store on API data",
+   "expected": "Headers present on pages and API responses",
+   "actual": "nosniff, frame DENY, no-referrer, CSP and no-store all present. CSP: default-src 'self'; img-src 'self' data:; style-src 'self'; ...",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-34",
+   "tc": "TC-Sec-02",
+   "req": "TMA-NF-003",
+   "title": "SQL injection attempts in login, search, filters and sort",
+   "expected": "Treated as data or refused; no extra rows returned; no server error",
+   "actual": "Status codes {'login': 401, 'q': 200, 'cat': 200, 'sort': 400, 'order': 400, 'status': 400}; no other user's data returned; table intact.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.59
+  },
+  {
+   "id": "SV-35",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Fuzz: malformed input gets a clear 4xx",
+   "expected": "Every malformed request returns a 4xx in the standard error format",
+   "actual": "All 19 probes returned a 4xx with the standard error body.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.04
+  },
+  {
+   "id": "SV-36a",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Boundary input: huge task id in URL",
+   "expected": "A controlled 4xx (or a normal success); never a 500",
+   "actual": "HTTP 404 NOT_FOUND",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-36b",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Boundary input: huge offset in query",
+   "expected": "A controlled 4xx (or a normal success); never a 500",
+   "actual": "HTTP 400 VALIDATION_ERROR",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-36c",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Boundary input: minutesBefore = 1e999 (infinity)",
+   "expected": "A controlled 4xx (or a normal success); never a 500",
+   "actual": "HTTP 400 VALIDATION_ERROR",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-36d",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Boundary input: date at year 1 with an offset",
+   "expected": "A controlled 4xx (or a normal success); never a 500",
+   "actual": "HTTP 400 VALIDATION_ERROR",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-36e",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Boundary input: date at year 9999 with an offset",
+   "expected": "A controlled 4xx (or a normal success); never a 500",
+   "actual": "HTTP 400 VALIDATION_ERROR",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-36f",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Boundary input: lone surrogate in title",
+   "expected": "A controlled 4xx (or a normal success); never a 500",
+   "actual": "HTTP 400 VALIDATION_ERROR",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-36g",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Boundary input: lone surrogate in password at login",
+   "expected": "A controlled 4xx (or a normal success); never a 500",
+   "actual": "HTTP 400 VALIDATION_ERROR",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-36h",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Boundary input: lone surrogate in search",
+   "expected": "A controlled 4xx (or a normal success); never a 500",
+   "actual": "HTTP 200",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-36i",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Boundary input: huge reminder id",
+   "expected": "A controlled 4xx (or a normal success); never a 500",
+   "actual": "HTTP 404 NOT_FOUND",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-36j",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Boundary input: due date at year 1, reminder before it",
+   "expected": "A controlled 4xx (or a normal success); never a 500",
+   "actual": "HTTP 400 VALIDATION_ERROR",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-36k",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Boundary input: JSON nested 12000 levels deep",
+   "expected": "A controlled 4xx (or a normal success); never a 500",
+   "actual": "HTTP 400 VALIDATION_ERROR",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-36l",
+   "tc": "TC-Val-01",
+   "req": "Test Plan 5.1 / SAD 4.4",
+   "title": "Boundary input: emoji and Kannada text (must still be accepted)",
+   "expected": "A controlled 4xx (or a normal success); never a 500",
+   "actual": "HTTP 201",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.01
+  },
+  {
+   "id": "SV-37",
+   "tc": "TC-Integrity-01",
+   "req": "TMA-NF-004",
+   "title": "The application still works after all the bad input",
+   "expected": "Health is ok and the user's data is unchanged",
+   "actual": "Health ok; base task unchanged.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "SV-38",
+   "tc": "TC-Perf-01",
+   "req": "TMA-NF-001",
+   "title": "Dashboard response time under normal load",
+   "expected": "95th percentile at most 3 seconds",
+   "actual": "1000 requests from 10 concurrent clients, 500 tasks per user: p50 20 ms, p95 33 ms, max 47 ms, 0 errors.",
+   "status": "PASS",
+   "evidence": [],
+   "metrics": {
+    "requests": 1000,
+    "concurrency": 10,
+    "tasksPerUser": 500,
+    "p50_ms": 20.3,
+    "p95_ms": 33.0,
+    "max_ms": 46.9
+   },
+   "seconds": 2.13
+  },
+  {
+   "id": "SV-39",
+   "tc": "TC-Perf-01",
+   "req": "TMA-NF-001 / Test Plan 5",
+   "title": "Search and filter response time under normal load",
+   "expected": "95th percentile at most 3 seconds",
+   "actual": "500 requests from 10 concurrent clients (up to 100 tasks per response): p50 35 ms, p95 64 ms, max 92 ms, 0 errors.",
+   "status": "PASS",
+   "evidence": [],
+   "metrics": {
+    "requests": 500,
+    "concurrency": 10,
+    "tasksPerUser": 500,
+    "p50_ms": 35.1,
+    "p95_ms": 64.3,
+    "max_ms": 91.6
+   },
+   "seconds": 1.86
+  },
+  {
+   "id": "SV-40",
+   "tc": "TC-Integrity-01",
+   "req": "TMA-NF-004",
+   "title": "Simultaneous writes from many clients",
+   "expected": "Every confirmed create is stored once, with its history; no 'database is locked' errors",
+   "actual": "200 creates from 20 threads: 200 returned 201, 200 new task rows, 200 history rows.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.69
+  },
+  {
+   "id": "SV-41",
+   "tc": "TC-Sec-03",
+   "req": "TMA-SR-001",
+   "title": "HTTP is redirected to HTTPS when FORCE_HTTPS is on",
+   "expected": "301 to the https:// address",
+   "actual": "301, Location: https://127.0.0.1:53869/api/health",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.21
+  },
+  {
+   "id": "SV-42",
+   "tc": "TC-Sec-03",
+   "req": "TMA-SR-001",
+   "title": "Traffic is really encrypted with `run.py --https`",
+   "expected": "A real TLS handshake succeeds, HSTS is sent over HTTPS, and plain HTTP is not served on that port",
+   "actual": "TLSv1.3 handshake OK; HSTS sent; plain HTTP not served on that port. Partial because the certificate is self-signed: a trusted certificate and reverse proxy exist only in a deployment (D12).",
+   "status": "PARTIAL",
+   "evidence": [],
+   "seconds": 0.33
+  },
+  {
+   "id": "SV-43",
+   "tc": "TC-Integrity-01",
+   "req": "TMA-NF-004 / SRS 6",
+   "title": "Server killed abruptly (kill -9): confirmed data survives",
+   "expected": "After a restart every confirmed change is present and the database passes its integrity check",
+   "actual": "All 24 remaining tasks, the edit, the completion and the delete survived; the session token stayed valid; integrity_check ok; no foreign-key violations.",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.54
+  },
+  {
+   "id": "SV-44",
+   "tc": "TC-Reliability-01",
+   "req": "TMA-NF-002",
+   "title": "Availability: health check and recovery",
+   "expected": "Health endpoint reports status; monthly uptime of at least 99.5%",
+   "actual": "Health returns 200 with database ok; back up 0.2 s after a kill and restart. NOT measured: the 99.5% monthly figure needs a deployed system monitored for a month (D13).",
+   "status": "PARTIAL",
+   "evidence": [],
+   "seconds": 0.21
+  },
+  {
+   "id": "SV-45",
+   "tc": "TC-Sec-05",
+   "req": "TMA-SR-005 / SAD 4.4",
+   "title": "Server log contains no passwords or session tokens",
+   "expected": "The test passwords and bearer tokens do not appear in the application log",
+   "actual": "2167 log lines scanned: no passwords, no tokens. Tracebacks logged: 0 (from the boundary-input defects, if any).",
+   "status": "PASS",
+   "evidence": [],
+   "seconds": 0.0
+  }
+ ]
+}

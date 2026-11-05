@@ -17,11 +17,24 @@ import os
 from flask import Flask, jsonify, redirect, request, send_from_directory
 from flask.logging import default_handler
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.routing import IntegerConverter
 
 from .config import CONFIGS
 from .db import get_db, init_db, register_db
 from .errors import register_error_handlers
-from .utils import now_db, to_api
+from .utils import MAX_DB_INT, now_db, to_api
+
+
+class BoundedIntConverter(IntegerConverter):
+    """
+    Replaces Flask's <int:...> everywhere (DEF-01). An id above SQLite's 64-bit limit cannot exist,
+    so it is lowered to the largest id SQLite accepts. No row has that id, so the route runs as
+    normal: the login check comes first, then the usual JSON "Task not found". Without this
+    the value reached SQLite, which raised OverflowError (HTTP 500).
+    """
+
+    def to_python(self, value):
+        return min(super().to_python(value), MAX_DB_INT)
 
 
 def create_app(config_name=None, overrides=None) -> Flask:
@@ -42,6 +55,9 @@ def create_app(config_name=None, overrides=None) -> Flask:
 
     logging.basicConfig(level=logging.WARNING if app.testing else logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
+    # Must be set before any blueprint adds its routes (DEF-01).
+    app.url_map.converters["int"] = BoundedIntConverter
 
     # --------------------------------------------------- database + errors
     register_db(app)

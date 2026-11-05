@@ -1,0 +1,394 @@
+{
+ "meta": {
+  "tool": "system_tests/stdlib_coverage.py (Python sys.monitoring)",
+  "python": "3.13.18",
+  "branch_coverage": true
+ },
+ "files": {
+  "app/__init__.py": {
+   "summary": {
+    "num_statements": 59,
+    "missing_lines": 0,
+    "covered_lines": 59,
+    "num_branches": 8,
+    "covered_branches": 8,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": [],
+   "source": {}
+  },
+  "app/access.py": {
+   "summary": {
+    "num_statements": 12,
+    "missing_lines": 0,
+    "covered_lines": 12,
+    "num_branches": 4,
+    "covered_branches": 4,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": [],
+   "source": {}
+  },
+  "app/admin.py": {
+   "summary": {
+    "num_statements": 65,
+    "missing_lines": 1,
+    "covered_lines": 64,
+    "num_branches": 20,
+    "covered_branches": 19,
+    "missing_branches": 1,
+    "num_partial_branches": 1
+   },
+   "missing_lines": [
+    106
+   ],
+   "missing_branches": [
+    [
+     108,
+     111
+    ]
+   ],
+   "source": {
+    "106": "raise ValidationError(\"limit must be an integer\") from None",
+    "108": "if request.args.get(\"type\"):"
+   }
+  },
+  "app/auth.py": {
+   "summary": {
+    "num_statements": 68,
+    "missing_lines": 0,
+    "covered_lines": 68,
+    "num_branches": 12,
+    "covered_branches": 12,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": [],
+   "source": {}
+  },
+  "app/config.py": {
+   "summary": {
+    "num_statements": 28,
+    "missing_lines": 0,
+    "covered_lines": 28,
+    "num_branches": 0,
+    "covered_branches": 0,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": [],
+   "source": {}
+  },
+  "app/dashboard.py": {
+   "summary": {
+    "num_statements": 16,
+    "missing_lines": 0,
+    "covered_lines": 16,
+    "num_branches": 0,
+    "covered_branches": 0,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": [],
+   "source": {}
+  },
+  "app/db.py": {
+   "summary": {
+    "num_statements": 42,
+    "missing_lines": 2,
+    "covered_lines": 40,
+    "num_branches": 2,
+    "covered_branches": 2,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [
+    95,
+    96
+   ],
+   "missing_branches": [],
+   "source": {
+    "95": "init_db()",
+    "96": "click.echo(f\"Initialised database at {current_app.config['DATABASE']}\")"
+   }
+  },
+  "app/errors.py": {
+   "summary": {
+    "num_statements": 37,
+    "missing_lines": 1,
+    "covered_lines": 36,
+    "num_branches": 4,
+    "covered_branches": 3,
+    "missing_branches": 1,
+    "num_partial_branches": 1
+   },
+   "missing_lines": [
+    72
+   ],
+   "missing_branches": [
+    [
+     69,
+     72
+    ]
+   ],
+   "source": {
+    "69": "if request.path.startswith(\"/api/\"):",
+    "72": "return err"
+   }
+  },
+  "app/notifications.py": {
+   "summary": {
+    "num_statements": 104,
+    "missing_lines": 21,
+    "covered_lines": 83,
+    "num_branches": 22,
+    "covered_branches": 17,
+    "missing_branches": 5,
+    "num_partial_branches": 1
+   },
+   "missing_lines": [
+    57,
+    58,
+    60,
+    61,
+    106,
+    118,
+    120,
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    128,
+    129,
+    131,
+    132,
+    133,
+    181,
+    182,
+    184
+   ],
+   "missing_branches": [
+    [
+     57,
+     58
+    ],
+    [
+     57,
+     60
+    ],
+    [
+     104,
+     106
+    ],
+    [
+     125,
+     123
+    ],
+    [
+     125,
+     126
+    ]
+   ],
+   "source": {
+    "57": "if not current_app.config[\"EMAIL_NOTIFICATIONS_ENABLED\"]:",
+    "58": "return False",
+    "60": "current_app.logger.info(\"EMAIL to=%s subject=%s\", to_address, subject)",
+    "61": "return True",
+    "104": "if channel == \"email\" and not email_notifier.send(",
+    "106": "continue",
+    "118": "interval = app.config[\"REMINDER_POLL_SECONDS\"]",
+    "120": "def loop():",
+    "121": "while True:",
+    "122": "try:",
+    "123": "with app.app_context():",
+    "124": "count = process_due_reminders()",
+    "125": "if count:",
+    "126": "app.logger.info(\"Delivered %d reminder notification(s)\", count)",
+    "128": "app.logger.exception(\"Reminder scheduler iteration failed\")",
+    "129": "time.sleep(interval)",
+    "131": "thread = threading.Thread(target=loop, name=\"reminder-scheduler\", daemon=True)",
+    "132": "thread.start()",
+    "133": "return thread",
+    "181": "with transaction() as db:",
+    "182": "db.execute(\"UPDATE notifications SET read_at = ? WHERE user_id = ? AND read_at IS NULL\",",
+    "184": "return ok({\"message\": \"All notifications marked as read\"})"
+   }
+  },
+  "app/scheduling.py": {
+   "summary": {
+    "num_statements": 96,
+    "missing_lines": 0,
+    "covered_lines": 96,
+    "num_branches": 24,
+    "covered_branches": 24,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": [],
+   "source": {}
+  },
+  "app/search.py": {
+   "summary": {
+    "num_statements": 48,
+    "missing_lines": 0,
+    "covered_lines": 48,
+    "num_branches": 12,
+    "covered_branches": 12,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": [],
+   "source": {}
+  },
+  "app/security.py": {
+   "summary": {
+    "num_statements": 84,
+    "missing_lines": 2,
+    "covered_lines": 82,
+    "num_branches": 16,
+    "covered_branches": 15,
+    "missing_branches": 1,
+    "num_partial_branches": 1
+   },
+   "missing_lines": [
+    87,
+    88
+   ],
+   "missing_branches": [
+    [
+     84,
+     87
+    ]
+   ],
+   "source": {
+    "84": "if db is not None:",
+    "87": "with transaction() as tx:",
+    "88": "tx.execute(sql, (now_db(), user_id))"
+   }
+  },
+  "app/status.py": {
+   "summary": {
+    "num_statements": 4,
+    "missing_lines": 0,
+    "covered_lines": 4,
+    "num_branches": 0,
+    "covered_branches": 0,
+    "missing_branches": 0,
+    "num_partial_branches": 0
+   },
+   "missing_lines": [],
+   "missing_branches": [],
+   "source": {}
+  },
+  "app/tasks.py": {
+   "summary": {
+    "num_statements": 108,
+    "missing_lines": 1,
+    "covered_lines": 107,
+    "num_branches": 24,
+    "covered_branches": 23,
+    "missing_branches": 1,
+    "num_partial_branches": 1
+   },
+   "missing_lines": [
+    180
+   ],
+   "missing_branches": [
+    [
+     179,
+     180
+    ]
+   ],
+   "source": {
+    "179": "if not changes and new_categories is None:",
+    "180": "return ok({\"task\": load_task(task_id)})"
+   }
+  },
+  "app/utils.py": {
+   "summary": {
+    "num_statements": 27,
+    "missing_lines": 0,
+    "covered_lines": 27,
+    "num_branches": 6,
+    "covered_branches": 5,
+    "missing_branches": 1,
+    "num_partial_branches": 1
+   },
+   "missing_lines": [],
+   "missing_branches": [
+    [
+     55,
+     57
+    ]
+   ],
+   "source": {
+    "55": "if dt.tzinfo is not None:                 # convert offsets such as +05:30 to UTC"
+   }
+  },
+  "app/validators.py": {
+   "summary": {
+    "num_statements": 90,
+    "missing_lines": 4,
+    "covered_lines": 86,
+    "num_branches": 42,
+    "covered_branches": 38,
+    "missing_branches": 4,
+    "num_partial_branches": 4
+   },
+   "missing_lines": [
+    43,
+    78,
+    80,
+    150
+   ],
+   "missing_branches": [
+    [
+     42,
+     43
+    ],
+    [
+     77,
+     78
+    ],
+    [
+     79,
+     80
+    ],
+    [
+     149,
+     150
+    ]
+   ],
+   "source": {
+    "42": "if len(name) > MAX_NAME:",
+    "43": "raise ValidationError(f\"Name must be at most {MAX_NAME} characters\", {\"field\": \"name\"})",
+    "77": "if not isinstance(value, str):",
+    "78": "raise ValidationError(\"Description must be text\", {\"field\": \"description\"})",
+    "79": "if len(value) > MAX_DESCRIPTION:",
+    "80": "raise ValidationError(f\"Description must be at most {MAX_DESCRIPTION} characters\",",
+    "149": "if not name:",
+    "150": "continue"
+   }
+  }
+ },
+ "totals": {
+  "num_statements": 888,
+  "missing_lines": 32,
+  "covered_lines": 856,
+  "num_branches": 196,
+  "covered_branches": 182,
+  "missing_branches": 14,
+  "num_partial_branches": 10
+ }
+}

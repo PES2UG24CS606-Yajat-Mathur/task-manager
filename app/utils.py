@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from flask import jsonify
 
 DB_FORMAT = "%Y-%m-%dT%H:%M:%S"
+MAX_DB_INT = 2 ** 63 - 1      # the largest integer SQLite can store or compare with
 
 
 def utcnow() -> datetime:

@@ -154,7 +154,7 @@ def resolve_reminder_time(data: dict, due_date_db):
                                   {"field": "minutesBefore"})
         try:
             minutes = int(data["minutesBefore"])
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):      # DEF-03: 1e999 parses as infinity
             raise ValidationError("minutesBefore must be a whole number",
                                   {"field": "minutesBefore"}) from None
         if not 0 <= minutes <= MAX_MINUTES_BEFORE:

@@ -8,7 +8,8 @@ delivered it, the code, and the automated tests that prove it.
 the final demo (tick it after the demo), **N** = not started.
 
 Tests are `file::test name` in `tests/`, as they appear in the GitHub Actions report.
-121 automated tests in total.
+155 automated tests in total at v1.0.1. Part 3 results for every requirement, including the
+browser-level checks, are in [`testing/System_Validation_Report.pdf`](testing/System_Validation_Report.pdf).
 
 ## Functional requirements
 
@@ -61,6 +62,7 @@ Tests are `file::test name` in `tests/`, as they appear in the GitHub Actions re
 Every test case ID in the Software Test Plan has at least one automated test:
 TC-Auth-01..04, TC-Task-01..04, TC-Org-01..05, TC-Search-01..03, TC-Progress-01,
 TC-Notify-01..02, TC-Admin-01, TC-Perf-01, TC-Reliability-01, TC-Sec-01..05,
-TC-Integrity-01, TC-UX-01.
+TC-Integrity-01, TC-UX-01. Part 3 adds TC-Val-01 (input validation and fuzz checks, Test Plan 5.1), tested in `tests/test_input_robustness.py`.
+Full text of every case: [`testing/Test_Case_Document.pdf`](testing/Test_Case_Document.pdf).
 
 Run only one group, for example: `pytest -k TC_Sec`.
